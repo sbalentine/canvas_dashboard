@@ -1,9 +1,19 @@
 require "json"
 require "time"
 require "cgi"
+require "fileutils"
 
 REFRESH_INTERVAL = 600
-CACHE_FILE = "/data/canvas_cache.json"
+
+CACHE_FILE =
+  if File.directory?("/data")
+    "/data/canvas_cache.json"
+  else
+    File.expand_path(
+      "../tmp/canvas_cache.json",
+      __dir__
+    )
+  end
 
 $dashboard_data = nil
 $last_successful_update = nil
@@ -44,7 +54,8 @@ def fetch_dashboard_data
   course_names = {}
 
   courses.each do |course|
-    course_names[course["id"].to_s] = course["name"]
+    course_names[course["id"].to_s] =
+      course["name"]
   end
 
   # ----------------------------------------------------------
@@ -60,7 +71,8 @@ def fetch_dashboard_data
     course_id && aid
   end
 
-  upcoming_by_course = upcoming_pairs.group_by(&:first)
+  upcoming_by_course =
+    upcoming_pairs.group_by(&:first)
 
   # ----------------------------------------------------------
   # Fetch submission status for upcoming assignments
@@ -69,7 +81,8 @@ def fetch_dashboard_data
   submissions = {}
 
   upcoming_by_course.each do |course_id, pairs|
-    assignment_ids = pairs.map(&:last).uniq
+    assignment_ids =
+      pairs.map(&:last).uniq
 
     submissions[course_id.to_s] ||= {}
 
@@ -86,7 +99,8 @@ def fetch_dashboard_data
         "&per_page=100"
 
       begin
-        course_submissions = canvas_get(path)
+        course_submissions =
+          canvas_get(path)
 
         course_submissions.each do |submission|
           aid =
@@ -100,9 +114,6 @@ def fetch_dashboard_data
         end
 
       rescue => e
-        # Submission status is useful, but it should never
-        # take down the entire dashboard if Canvas denies
-        # access for a particular course.
         puts(
           "Unable to fetch submissions for course " \
           "#{course_id}: #{e.class}: #{e.message}"
@@ -110,10 +121,6 @@ def fetch_dashboard_data
       end
     end
   end
-
-  # ----------------------------------------------------------
-  # Final cached data structure
-  # ----------------------------------------------------------
 
   {
     "courses" => courses,
@@ -131,18 +138,22 @@ end
 # ============================================================
 
 def save_cache(data)
+  FileUtils.mkdir_p(
+    File.dirname(CACHE_FILE)
+  )
+
   File.write(
     CACHE_FILE,
     JSON.pretty_generate(data)
   )
 
-  puts "Canvas cache saved."
+  puts "Canvas cache saved to #{CACHE_FILE}."
 end
 
 def load_cache
   return nil unless File.exist?(CACHE_FILE)
 
-  puts "Loading cached Canvas data..."
+  puts "Loading cached Canvas data from #{CACHE_FILE}..."
 
   JSON.parse(
     File.read(CACHE_FILE)
@@ -164,8 +175,6 @@ end
 def refresh_dashboard
   data = fetch_dashboard_data
 
-  # Only replace our known-good cache after the primary
-  # Canvas requests complete successfully.
   save_cache(data)
 
   $data_mutex.synchronize do

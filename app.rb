@@ -2,6 +2,8 @@ require "webrick"
 require "erb"
 require "json"
 
+APP_ROOT = File.expand_path(__dir__)
+
 require_relative "lib/canvas"
 require_relative "lib/helpers"
 require_relative "lib/dashboard_data"
@@ -74,7 +76,9 @@ server.mount_proc "/" do |_request, response|
     end
 
     template = ERB.new(
-      File.read("/app/views/dashboard.erb")
+      File.read(
+        File.join(APP_ROOT, "views", "dashboard.erb")
+      )
     )
 
     response.status = 200
@@ -107,12 +111,12 @@ end
 server.mount_proc "/dashboard.css" do |_request, response|
   response.status = 200
   response["Content-Type"] = "text/css; charset=utf-8"
-
-  response["Cache-Control"] =
-    "public, max-age=300"
+  response["Cache-Control"] = "public, max-age=300"
 
   response.body =
-    File.read("/app/public/dashboard.css")
+    File.read(
+      File.join(APP_ROOT, "public", "dashboard.css")
+    )
 end
 
 # ============================================================
@@ -122,12 +126,12 @@ end
 server.mount_proc "/school-icon.svg" do |_request, response|
   response.status = 200
   response["Content-Type"] = "image/svg+xml"
-
-  response["Cache-Control"] =
-    "public, max-age=86400"
+  response["Cache-Control"] = "public, max-age=86400"
 
   response.body =
-    File.read("/app/public/school-icon.svg")
+    File.read(
+      File.join(APP_ROOT, "public", "school-icon.svg")
+    )
 end
 
 # ============================================================
@@ -136,12 +140,8 @@ end
 
 server.mount_proc "/manifest.json" do |_request, response|
   response.status = 200
-
-  response["Content-Type"] =
-    "application/manifest+json"
-
-  response["Cache-Control"] =
-    "no-cache"
+  response["Content-Type"] = "application/manifest+json"
+  response["Cache-Control"] = "no-cache"
 
   response.body = JSON.generate(
     {
