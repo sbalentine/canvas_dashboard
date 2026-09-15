@@ -1,6 +1,6 @@
 name: "School Dashboard"
 description: "Local Canvas LMS school dashboard"
-version: "0.7.1"
+version: "0.7.2"
 slug: "canvas_dashboard"
 init: false
 arch:
