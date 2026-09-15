@@ -1,0 +1,19 @@
+name: "School Dashboard"
+description: "Local Canvas LMS school dashboard"
+version: "0.7.1"
+slug: "canvas_dashboard"
+init: false
+arch:
+  - aarch64
+ports:
+  4567/tcp: 4567
+ports_description:
+  4567/tcp: "School Dashboard"
+map:
+  - addon_config:rw
+options:
+  canvas_token: ""
+  token_expires: ""
+schema:
+  canvas_token: password
+  token_expires: str

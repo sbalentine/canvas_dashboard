@@ -1,0 +1,531 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --background: #f4f6f8;
+  --card: #ffffff;
+  --text: #1d2939;
+  --muted: #667085;
+  --border: #eaecf0;
+
+  --danger: #b42318;
+  --danger-bg: #fff1f0;
+  --danger-border: #fecdca;
+
+  --warning: #b54708;
+  --warning-bg: #fffaeb;
+
+  --success: #027a48;
+  --success-bg: #ecfdf3;
+
+  --purple: #5b67d6;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.container {
+  max-width: 980px;
+  margin: 0 auto;
+
+  padding:
+    max(24px, env(safe-area-inset-top))
+    24px
+    max(40px, env(safe-area-inset-bottom));
+}
+
+/* ==========================================================
+   Header
+   ========================================================== */
+
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+
+  margin-bottom: 18px;
+}
+
+.top-header h1 {
+  margin: 0 0 4px;
+  font-size: 32px;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.token-status {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+.token-status span {
+  display: block;
+}
+
+.token-warning {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.token-danger {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* ==========================================================
+   Canvas Status
+   ========================================================== */
+
+.system-status {
+  margin-bottom: 24px;
+  padding: 11px 15px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.system-status.good {
+  background: var(--success-bg);
+}
+
+.system-status.warning {
+  background: var(--warning-bg);
+}
+
+/* ==========================================================
+   Missing Assignments
+   ========================================================== */
+
+.missing-section {
+  background: var(--danger-bg);
+  border: 2px solid var(--danger-border);
+  border-radius: 20px;
+
+  padding: 22px;
+  margin-bottom: 32px;
+
+  box-shadow:
+    0 4px 18px
+    rgba(180, 35, 24, 0.08);
+}
+
+.missing-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+}
+
+.missing-heading h2 {
+  margin: 3px 0 0;
+  color: var(--danger);
+  font-size: 25px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.danger-text {
+  color: var(--danger);
+}
+
+.missing-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 46px;
+  height: 46px;
+
+  border-radius: 50%;
+
+  background: var(--danger);
+  color: white;
+
+  font-size: 22px;
+  font-weight: 800;
+}
+
+/* ==========================================================
+   Assignment Rows
+   ========================================================== */
+
+.missing-row,
+.upcoming-row,
+.grade-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 15px 0;
+
+  border-top:
+    1px solid
+    rgba(0, 0, 0, 0.07);
+}
+
+.upcoming-row.needs-work {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 250, 235, 0.75),
+      rgba(255, 255, 255, 0)
+    );
+
+  margin: 0 -10px;
+
+  padding-left: 10px;
+  padding-right: 10px;
+
+  border-radius: 10px;
+}
+
+.missing-icon,
+.submission-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex: 0 0 30px;
+
+  width: 30px;
+  height: 30px;
+
+  border-radius: 50%;
+
+  font-weight: 800;
+}
+
+.missing-icon {
+  background: var(--danger);
+  color: white;
+}
+
+.assignment-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.assignment-title {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.assignment-course {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.assignment-due {
+  flex: 0 0 auto;
+
+  color: var(--muted);
+
+  text-align: right;
+  white-space: nowrap;
+
+  font-size: 14px;
+}
+
+.assignment-due span {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+}
+
+.assignment-due.overdue {
+  color: var(--danger);
+}
+
+/* ==========================================================
+   Submission Status
+   ========================================================== */
+
+.submission-icon.submitted,
+.submission-icon.graded {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.submission-icon.not-submitted {
+  background: var(--warning-bg);
+  color: var(--warning);
+  border: 1px solid #fedf89;
+}
+
+.submission-icon.missing-status {
+  background: var(--danger);
+  color: white;
+}
+
+.submission-icon.late-status {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.submission-status {
+  display: inline-block;
+
+  margin-top: 7px;
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.submission-status.submitted,
+.submission-status.graded {
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.submission-status.not-submitted {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+.submission-status.missing-status {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.submission-status.late-status {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+
+/* ==========================================================
+   Sections / Cards
+   ========================================================== */
+
+.section {
+  margin-bottom: 34px;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+}
+
+.section-header h2 {
+  margin: 0;
+  font-size: 25px;
+}
+
+.section-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.card,
+.grade-card {
+  background: var(--card);
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  padding: 20px;
+  margin-bottom: 16px;
+
+  box-shadow:
+    0 2px 8px
+    rgba(16, 24, 40, 0.04);
+}
+
+.day-group + .day-group {
+  margin-top: 22px;
+}
+
+.day-heading {
+  padding-bottom: 8px;
+
+  color: var(--muted);
+
+  font-size: 13px;
+  font-weight: 800;
+
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ==========================================================
+   Empty State
+   ========================================================== */
+
+.empty-state {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+
+  padding: 12px 0;
+}
+
+.empty-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 38px;
+  height: 38px;
+
+  border-radius: 50%;
+
+  background: var(--success-bg);
+  color: var(--success);
+
+  font-weight: 800;
+}
+
+.empty-state strong,
+.empty-state span {
+  display: block;
+}
+
+.empty-state span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ==========================================================
+   Grades
+   ========================================================== */
+
+.grade-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.grade-header h3 {
+  margin: 0 0 5px;
+  font-size: 20px;
+}
+
+.grade-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.grade-percent {
+  font-size: 30px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.recent-label {
+  margin-top: 22px;
+  padding-bottom: 6px;
+
+  color: var(--muted);
+
+  font-size: 11px;
+  font-weight: 800;
+
+  letter-spacing: 0.07em;
+}
+
+.grade-score {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.grade-score strong,
+.grade-score span {
+  display: block;
+}
+
+.grade-score span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ==========================================================
+   iPad / Phone
+   ========================================================== */
+
+@media (max-width: 600px) {
+  .container {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  .top-header {
+    display: block;
+  }
+
+  .top-header h1 {
+    font-size: 27px;
+  }
+
+  .token-status {
+    margin-top: 7px;
+    text-align: left;
+  }
+
+  .missing-section,
+  .card,
+  .grade-card {
+    border-radius: 15px;
+    padding: 17px;
+  }
+
+  .missing-heading h2,
+  .section-header h2 {
+    font-size: 22px;
+  }
+
+  .section-note {
+    display: none;
+  }
+
+  .assignment-title {
+    font-size: 15px;
+  }
+
+  .grade-percent {
+    font-size: 25px;
+  }
+
+  .submission-icon {
+    flex-basis: 28px;
+    width: 28px;
+    height: 28px;
+  }
+}

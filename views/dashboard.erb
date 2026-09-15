@@ -1,0 +1,578 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="apple-mobile-web-app-title"
+    content="School"
+  >
+
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="default"
+  >
+
+  <meta
+    name="mobile-web-app-capable"
+    content="yes"
+  >
+
+  <meta
+    name="theme-color"
+    content="#5b67d6"
+  >
+
+  <meta
+    http-equiv="refresh"
+    content="300"
+  >
+
+  <link
+    rel="apple-touch-icon"
+    href="/school-icon.svg"
+  >
+
+  <link
+    rel="icon"
+    href="/school-icon.svg"
+  >
+
+  <link
+    rel="manifest"
+    href="/manifest.json"
+  >
+
+  <link
+    rel="stylesheet"
+    href="/dashboard.css"
+  >
+
+  <title>School Dashboard</title>
+</head>
+
+<body>
+  <main class="container">
+
+    <!-- =====================================================
+         Header
+         ===================================================== -->
+
+    <header class="top-header">
+
+      <div>
+        <h1>📚 School Dashboard</h1>
+
+        <div class="subtitle">
+          <%= Time.now.strftime("%A, %B %-d") %>
+        </div>
+      </div>
+
+      <% days = token_days_remaining %>
+      <% expiration = token_expiration %>
+
+      <% if days %>
+
+        <% if days < 0 %>
+
+          <div class="token-status token-danger">
+            🔑 Canvas token expired
+            <%= days.abs %> days ago
+          </div>
+
+        <% elsif days <= 7 %>
+
+          <div class="token-status token-danger">
+            ⚠️ Canvas token expires in
+            <%= days %> days
+
+            <span>
+              <%= expiration.strftime("%b %-d, %Y") %>
+            </span>
+          </div>
+
+        <% elsif days <= 14 %>
+
+          <div class="token-status token-warning">
+            🔑 Canvas token expires in
+            <%= days %> days
+
+            <span>
+              <%= expiration.strftime("%b %-d, %Y") %>
+            </span>
+          </div>
+
+        <% else %>
+
+          <div class="token-status">
+            🔑 Token:
+            <%= days %> days remaining
+          </div>
+
+        <% end %>
+
+      <% end %>
+
+    </header>
+
+    <!-- =====================================================
+         Canvas Status
+         ===================================================== -->
+
+    <% status = dashboard_status %>
+
+    <% if status[:error] %>
+
+      <div class="system-status warning">
+        <strong>
+          ⚠ Canvas is temporarily unavailable.
+        </strong>
+
+        Showing saved data from
+
+        <% if status[:updated_at] %>
+          <%= status[:updated_at].strftime("%-I:%M %p") %>.
+        <% else %>
+          the last update.
+        <% end %>
+      </div>
+
+    <% elsif status[:updated_at] %>
+
+      <div class="system-status good">
+        ✓ Canvas updated
+        <%= status[:updated_at].strftime("%-I:%M %p") %>
+      </div>
+
+    <% end %>
+
+    <!-- =====================================================
+         Missing Assignments
+         ===================================================== -->
+
+    <%
+      missing = (data["missing"] || []).sort_by do |assignment|
+        assignment_due_time(assignment) || Time.at(0)
+      end
+    %>
+
+    <% unless missing.empty? %>
+
+      <section class="missing-section">
+
+        <div class="missing-heading">
+
+          <div>
+            <div class="eyebrow danger-text">
+              NEEDS ATTENTION
+            </div>
+
+            <h2>
+              ⚠️ Missing Assignments
+            </h2>
+          </div>
+
+          <div class="missing-count">
+            <%= missing.length %>
+          </div>
+
+        </div>
+
+        <% missing.each do |assignment| %>
+
+          <%
+            course_id = assignment_course_id(assignment)
+            due = assignment_due_time(assignment)
+            url = assignment_url(assignment)
+          %>
+
+          <div class="missing-row">
+
+            <div class="missing-icon">
+              !
+            </div>
+
+            <div class="assignment-main">
+
+              <div class="assignment-title">
+
+                <% if url %>
+                  <a
+                    href="<%= h url %>"
+                    target="_blank"
+                  >
+                    <%= h assignment_name(assignment) %>
+                  </a>
+                <% else %>
+                  <%= h assignment_name(assignment) %>
+                <% end %>
+
+              </div>
+
+              <div class="assignment-course">
+                <%= h course_name(data, course_id) %>
+              </div>
+
+            </div>
+
+            <div class="assignment-due overdue">
+
+              <strong>
+                <%= due ? date_label(due) : "Missing" %>
+              </strong>
+
+              <% if due %>
+                <span>
+                  <%= h due_time_label(due) %>
+                </span>
+              <% end %>
+
+            </div>
+
+          </div>
+
+        <% end %>
+
+      </section>
+
+    <% end %>
+
+    <!-- =====================================================
+         Next 7 Days
+         ===================================================== -->
+
+    <%
+      now = Time.now
+      end_time = now + (7 * 24 * 60 * 60)
+
+      upcoming = (data["upcoming"] || []).select do |event|
+        due = assignment_due_time(event)
+
+        due &&
+          due >= now &&
+          due <= end_time
+      end
+
+      upcoming.sort_by! do |event|
+        assignment_due_time(event)
+      end
+
+      upcoming_by_date = upcoming.group_by do |event|
+        assignment_due_time(event).getlocal.to_date
+      end
+    %>
+
+    <section class="section">
+
+      <div class="section-header">
+
+        <h2>
+          📅 Next 7 Days
+        </h2>
+
+        <div class="section-note">
+          <%= upcoming.length %> upcoming
+        </div>
+
+      </div>
+
+      <div class="card">
+
+        <% if upcoming.empty? %>
+
+          <div class="empty-state">
+
+            <div class="empty-check">
+              ✓
+            </div>
+
+            <div>
+              <strong>
+                Nothing due in the next 7 days.
+              </strong>
+
+              <span>
+                You're all caught up!
+              </span>
+            </div>
+
+          </div>
+
+        <% else %>
+
+          <% upcoming_by_date.each do |_date, events| %>
+
+            <%
+              first_due = assignment_due_time(events.first)
+            %>
+
+            <div class="day-group">
+
+              <div class="day-heading">
+                <%= h date_label(first_due) %>
+              </div>
+
+              <% events.each do |event| %>
+
+                <%
+                  due = assignment_due_time(event)
+                  course_id = assignment_course_id(event)
+                  aid = assignment_id(event)
+                  url = assignment_url(event)
+
+                  submission = submission_for(
+                    data,
+                    course_id,
+                    aid
+                  )
+
+                  assignment_status =
+                    submission_status(submission)
+
+                  row_class =
+                    if assignment_status[:css] == "not-submitted"
+                      "upcoming-row needs-work"
+                    else
+                      "upcoming-row"
+                    end
+                %>
+
+                <div class="<%= row_class %>">
+
+                  <div
+                    class="submission-icon <%= assignment_status[:css] %>"
+                  >
+                    <%= assignment_status[:icon] %>
+                  </div>
+
+                  <div class="assignment-main">
+
+                    <div class="assignment-title">
+
+                      <% if url %>
+                        <a
+                          href="<%= h url %>"
+                          target="_blank"
+                        >
+                          <%= h assignment_name(event) %>
+                        </a>
+                      <% else %>
+                        <%= h assignment_name(event) %>
+                      <% end %>
+
+                    </div>
+
+                    <div class="assignment-course">
+                      <%= h course_name(data, course_id) %>
+                    </div>
+
+                    <div
+                      class="submission-status <%= assignment_status[:css] %>"
+                    >
+                      <%= h assignment_status[:label] %>
+                    </div>
+
+                  </div>
+
+                  <div class="assignment-due">
+                    <%= h due_time_label(due) %>
+                  </div>
+
+                </div>
+
+              <% end %>
+
+            </div>
+
+          <% end %>
+
+        <% end %>
+
+      </div>
+
+    </section>
+
+    <!-- =====================================================
+         Grades
+         ===================================================== -->
+
+    <%
+      valid_grades = (data["grades"] || []).select do |submission|
+        assignment = submission["assignment"]
+
+        assignment &&
+          !submission["score"].nil? &&
+          !assignment["points_possible"].nil? &&
+          assignment["omit_from_final_grade"] != true
+      end
+
+      grades_by_course = valid_grades.group_by do |submission|
+        submission.dig(
+          "assignment",
+          "course_id"
+        )
+      end
+    %>
+
+    <section class="section">
+
+      <div class="section-header">
+
+        <h2>
+          📊 Grades
+        </h2>
+
+        <div class="section-note">
+          Calculated from graded work
+        </div>
+
+      </div>
+
+      <% grades_by_course.each do |course_id, submissions| %>
+
+        <%
+          earned = submissions.sum do |submission|
+            submission["score"].to_f
+          end
+
+          possible = submissions.sum do |submission|
+            submission.dig(
+              "assignment",
+              "points_possible"
+            ).to_f
+          end
+
+          calculated = percentage(
+            earned,
+            possible
+          )
+
+          recent = submissions.sort_by do |submission|
+            submission["graded_at"] ||
+              submission.dig(
+                "assignment",
+                "due_at"
+              ) ||
+              ""
+          end.reverse.first(5)
+        %>
+
+        <section class="grade-card">
+
+          <div class="grade-header">
+
+            <div>
+
+              <h3>
+                <%= h course_name(data, course_id) %>
+              </h3>
+
+              <div class="grade-meta">
+                <%= submissions.length %>
+                graded assignments
+                ·
+                <%= h format_number(earned) %>
+                /
+                <%= h format_number(possible) %>
+                pts
+              </div>
+
+            </div>
+
+            <div class="grade-percent">
+              <% if calculated %>
+                <%= calculated %>%
+              <% else %>
+                —
+              <% end %>
+            </div>
+
+          </div>
+
+          <div class="recent-label">
+            RECENT GRADES
+          </div>
+
+          <% recent.each do |submission| %>
+
+            <%
+              assignment = submission["assignment"]
+
+              score = submission["score"]
+              points = assignment["points_possible"]
+
+              pct = percentage(
+                score,
+                points
+              )
+
+              url = assignment["html_url"]
+            %>
+
+            <div class="grade-row">
+
+              <div class="assignment-main">
+
+                <div class="assignment-title">
+
+                  <% if url %>
+                    <a
+                      href="<%= h url %>"
+                      target="_blank"
+                    >
+                      <%= h assignment["name"] %>
+                    </a>
+                  <% else %>
+                    <%= h assignment["name"] %>
+                  <% end %>
+
+                </div>
+
+                <div class="assignment-course">
+                  <%= h grade_date(
+                    submission["graded_at"] ||
+                    assignment["due_at"]
+                  ) %>
+                </div>
+
+              </div>
+
+              <div class="grade-score">
+
+                <strong>
+                  <%= h format_number(score) %>
+                  /
+                  <%= h format_number(points) %>
+                </strong>
+
+                <% if pct %>
+                  <span>
+                    <%= pct %>%
+                  </span>
+                <% end %>
+
+              </div>
+
+            </div>
+
+          <% end %>
+
+        </section>
+
+      <% end %>
+
+    </section>
+
+  </main>
+</body>
+</html>

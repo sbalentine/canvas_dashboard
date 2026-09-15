@@ -1,0 +1,19 @@
+# Home Assistant runtime data / secrets
+data/
+options.json
+canvas_cache.json
+
+# Environment / secrets
+.env
+.env.*
+*.key
+*.pem
+
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Ruby
+.bundle/
+vendor/bundle/
