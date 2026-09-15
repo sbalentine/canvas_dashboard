@@ -55,7 +55,7 @@
 
   <link
     rel="stylesheet"
-    href="/dashboard.css"
+    href="/dashboard.css?v=0.8.0"
   >
 
   <title>School Dashboard</title>
@@ -63,6 +63,46 @@
 
 <body>
   <main class="container">
+
+    <%
+      now = Time.now
+      today = now.getlocal.to_date
+      tomorrow = today + 1
+      end_time = now + (7 * 24 * 60 * 60)
+
+      missing = (data["missing"] || []).sort_by do |assignment|
+        assignment_due_time(assignment) || Time.at(0)
+      end
+
+      upcoming = (data["upcoming"] || []).select do |event|
+        due = assignment_due_time(event)
+        due && due >= now && due <= end_time
+      end.sort_by do |event|
+        assignment_due_time(event)
+      end
+
+      upcoming_by_date = upcoming.group_by do |event|
+        assignment_due_time(event).getlocal.to_date
+      end
+
+      incomplete_upcoming = upcoming.reject do |event|
+        submission_complete?(
+          submission_for(
+            data,
+            assignment_course_id(event),
+            assignment_id(event)
+          )
+        )
+      end
+
+      due_today = incomplete_upcoming.count do |event|
+        assignment_due_time(event).getlocal.to_date == today
+      end
+
+      due_tomorrow = incomplete_upcoming.count do |event|
+        assignment_due_time(event).getlocal.to_date == tomorrow
+      end
+    %>
 
     <!-- =====================================================
          Header
@@ -125,6 +165,33 @@
 
     </header>
 
+    <section class="today-summary">
+      <div>
+        <h2>
+          <%= h greeting_for(now) %>,
+          <%= h profile_first_name(data) %>! 👋
+        </h2>
+
+        <p>
+          <%= due_today %>
+          <%= due_today == 1 ? "assignment" : "assignments" %>
+          left today ·
+          <%= due_tomorrow %> due tomorrow ·
+          <% if missing.empty? %>
+            No missing work 🎉
+          <% else %>
+            <strong><%= missing.length %> missing</strong>
+          <% end %>
+        </p>
+      </div>
+
+      <form method="post" action="/refresh">
+        <button class="refresh-button" type="submit">
+          ↻ Refresh Canvas
+        </button>
+      </form>
+    </section>
+
     <!-- =====================================================
          Canvas Status
          ===================================================== -->
@@ -159,12 +226,6 @@
     <!-- =====================================================
          Missing Assignments
          ===================================================== -->
-
-    <%
-      missing = (data["missing"] || []).sort_by do |assignment|
-        assignment_due_time(assignment) || Time.at(0)
-      end
-    %>
 
     <% unless missing.empty? %>
 
@@ -251,27 +312,6 @@
          Next 7 Days
          ===================================================== -->
 
-    <%
-      now = Time.now
-      end_time = now + (7 * 24 * 60 * 60)
-
-      upcoming = (data["upcoming"] || []).select do |event|
-        due = assignment_due_time(event)
-
-        due &&
-          due >= now &&
-          due <= end_time
-      end
-
-      upcoming.sort_by! do |event|
-        assignment_due_time(event)
-      end
-
-      upcoming_by_date = upcoming.group_by do |event|
-        assignment_due_time(event).getlocal.to_date
-      end
-    %>
-
     <section class="section">
 
       <div class="section-header">
@@ -314,6 +354,26 @@
 
             <%
               first_due = assignment_due_time(events.first)
+              events = events.sort_by do |event|
+                submission = submission_for(
+                  data,
+                  assignment_course_id(event),
+                  assignment_id(event)
+                )
+
+                [submission_complete?(submission) ? 1 : 0,
+                 assignment_due_time(event)]
+              end
+
+              day_complete = events.all? do |event|
+                submission_complete?(
+                  submission_for(
+                    data,
+                    assignment_course_id(event),
+                    assignment_id(event)
+                  )
+                )
+              end
             %>
 
             <div class="day-group">
@@ -321,6 +381,13 @@
               <div class="day-heading">
                 <%= h date_label(first_due) %>
               </div>
+
+              <% if day_complete %>
+                <div class="day-complete">
+                  ✓ All done for
+                  <%= h first_due.getlocal.strftime("%A") %>
+                </div>
+              <% end %>
 
               <% events.each do |event| %>
 
@@ -339,8 +406,12 @@
                   assignment_status =
                     submission_status(submission)
 
+                  comment = latest_submission_comment(submission)
+
                   row_class =
-                    if assignment_status[:css] == "not-submitted"
+                    if submission_complete?(submission)
+                      "upcoming-row completed"
+                    elsif assignment_status[:css] == "not-submitted"
                       "upcoming-row needs-work"
                     else
                       "upcoming-row"
@@ -380,7 +451,19 @@
                       class="submission-status <%= assignment_status[:css] %>"
                     >
                       <%= h assignment_status[:label] %>
+                      <% if comment %>
+                        · 💬 Feedback
+                      <% end %>
                     </div>
+
+                    <% if comment %>
+                      <div class="teacher-comment">
+                        <strong>
+                          💬 <%= h(comment["author_name"] || "Teacher") %>:
+                        </strong>
+                        <%= h comment["comment"] %>
+                      </div>
+                    <% end %>
 
                   </div>
 
@@ -422,6 +505,18 @@
           "course_id"
         )
       end
+
+
+      needs_attention = valid_grades.select do |submission|
+        pct = percentage(
+          submission["score"],
+          submission.dig("assignment", "points_possible")
+        )
+
+        pct && pct < 70
+      end.sort_by do |submission|
+        submission["graded_at"] || ""
+      end.reverse.first(5)
     %>
 
     <section class="section">
@@ -437,6 +532,29 @@
         </div>
 
       </div>
+
+      <% unless needs_attention.empty? %>
+        <div class="grade-attention">
+          <div class="eyebrow danger-text">NEEDS ATTENTION</div>
+
+          <% needs_attention.each do |submission| %>
+            <%
+              assignment = submission["assignment"]
+              pct = percentage(
+                submission["score"],
+                assignment["points_possible"]
+              )
+            %>
+            <div>
+              <strong><%= h assignment["name"] %></strong>
+              <span>
+                <%= h course_name(data, assignment["course_id"]) %>
+                · <%= pct %>%
+              </span>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
 
       <% grades_by_course.each do |course_id, submissions| %>
 
@@ -519,7 +637,7 @@
               url = assignment["html_url"]
             %>
 
-            <div class="grade-row">
+            <div class="grade-row<%= pct && pct < 70 ? " low-grade" : "" %>">
 
               <div class="assignment-main">
 

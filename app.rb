@@ -104,6 +104,21 @@ server.mount_proc "/" do |_request, response|
   end
 end
 
+server.mount_proc "/refresh" do |request, response|
+  unless request.request_method == "POST"
+    response.status = 405
+    response["Allow"] = "POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  refresh_dashboard
+
+  response.status = 303
+  response["Location"] = "/"
+  response.body = ""
+end
+
 # ============================================================
 # CSS
 # ============================================================

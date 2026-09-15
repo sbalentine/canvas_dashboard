@@ -27,6 +27,10 @@ $data_mutex = Mutex.new
 def fetch_dashboard_data
   puts "Refreshing Canvas data..."
 
+  profile = canvas_get(
+    "/api/v1/users/self/profile"
+  )
+
   courses = canvas_get(
     "/api/v1/courses?enrollment_state=active&per_page=100"
   )
@@ -95,6 +99,7 @@ def fetch_dashboard_data
         "/api/v1/courses/#{course_id}/students/submissions" \
         "?student_ids%5B%5D=self" \
         "&include%5B%5D=assignment" \
+        "&include%5B%5D=submission_comments" \
         "&#{query}" \
         "&per_page=100"
 
@@ -123,6 +128,7 @@ def fetch_dashboard_data
   end
 
   {
+    "profile" => profile,
     "courses" => courses,
     "course_names" => course_names,
     "grades" => grades,

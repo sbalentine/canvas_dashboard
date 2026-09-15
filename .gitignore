@@ -24,3 +24,6 @@ tmp/
 # Ruby
 .bundle/
 vendor/bundle/
+
+# Automated testing tools
+.playwright-mcp
