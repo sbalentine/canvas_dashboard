@@ -105,6 +105,24 @@ def grade_date(value)
   time.getlocal.strftime("%b %-d")
 end
 
+def greeting_for(time = Time.now)
+  case time.hour
+  when 0...12
+    "Good morning"
+  when 12...17
+    "Good afternoon"
+  else
+    "Good evening"
+  end
+end
+
+def profile_first_name(data)
+  name = data.dig("profile", "short_name") ||
+    data.dig("profile", "name")
+
+  name.to_s.strip.split.first || "there"
+end
+
 # ============================================================
 # Submission Helpers
 # ============================================================
@@ -180,4 +198,21 @@ def submission_status(submission)
     css: "not-submitted",
     icon: "○"
   }
+end
+
+def submission_complete?(submission)
+  status = submission_status(submission)
+
+  !%w[not-submitted missing-status].include?(status[:css])
+end
+
+def latest_submission_comment(submission)
+  comments = submission && submission["submission_comments"]
+  return nil unless comments.is_a?(Array)
+
+  comments.reject do |comment|
+    comment["comment"].to_s.strip.empty?
+  end.max_by do |comment|
+    parse_canvas_time(comment["created_at"]) || Time.at(0)
+  end
 end

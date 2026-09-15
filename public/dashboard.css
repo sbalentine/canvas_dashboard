@@ -97,6 +97,46 @@ a:hover {
   font-weight: 700;
 }
 
+.today-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding: 20px 22px;
+  border-left: 4px solid var(--purple);
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
+}
+
+.today-summary h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+
+.today-summary p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.refresh-button {
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid #4753bd;
+  border-radius: 8px;
+  background: var(--purple);
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.refresh-button:hover {
+  background: #4753bd;
+}
+
 /* ==========================================================
    Canvas Status
    ========================================================== */
@@ -208,6 +248,10 @@ a:hover {
   border-radius: 10px;
 }
 
+.upcoming-row.completed {
+  opacity: 0.52;
+}
+
 .missing-icon,
 .submission-icon {
   display: flex;
@@ -243,6 +287,16 @@ a:hover {
   margin-top: 4px;
   color: var(--muted);
   font-size: 13px;
+}
+
+.teacher-comment {
+  margin-top: 8px;
+  padding: 9px 11px;
+  border-left: 3px solid #98a2b3;
+  background: #f8fafc;
+  color: #475467;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .assignment-due {
@@ -382,6 +436,14 @@ a:hover {
   letter-spacing: 0.05em;
 }
 
+.day-complete {
+  padding: 10px 12px;
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 14px;
+  font-weight: 700;
+}
+
 /* ==========================================================
    Empty State
    ========================================================== */
@@ -448,6 +510,32 @@ a:hover {
   white-space: nowrap;
 }
 
+.grade-attention {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  background: var(--danger-bg);
+}
+
+.grade-attention > div:not(.eyebrow) {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 9px;
+  font-size: 14px;
+}
+
+.grade-attention span {
+  color: var(--danger);
+  text-align: right;
+}
+
+.grade-row.low-grade {
+  margin: 0 -10px;
+  padding-right: 10px;
+  padding-left: 10px;
+  background: var(--danger-bg);
+}
+
 .recent-label {
   margin-top: 22px;
   padding-bottom: 6px;
@@ -488,6 +576,18 @@ a:hover {
 
   .top-header {
     display: block;
+  }
+
+  .today-summary {
+    display: block;
+  }
+
+  .today-summary form {
+    margin-top: 14px;
+  }
+
+  .refresh-button {
+    width: 100%;
   }
 
   .top-header h1 {
