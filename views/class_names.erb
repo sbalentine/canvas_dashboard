@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Edit Class Names</title>
+</head>
+
+<body>
+  <main class="container settings-page">
+    <header class="settings-header">
+      <div>
+        <h1>Edit Class Names</h1>
+        <div class="subtitle">Canvas course names stay unchanged.</div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <form class="card class-name-settings" method="post" action="/class-names">
+      <% (data["courses"] || []).sort_by { |course| course["name"].to_s.strip }.each do |course| %>
+        <label class="class-name-row">
+          <span class="canvas-class-name">
+            <%= h course["name"].to_s.strip %>
+          </span>
+          <span class="short-name-label">Short name</span>
+          <input
+            type="text"
+            name="course_<%= h course["id"] %>"
+            value="<%= h mappings[course["id"].to_s] %>"
+            maxlength="80"
+            placeholder="Use Canvas name"
+          >
+        </label>
+      <% end %>
+
+      <div class="settings-actions">
+        <a href="/">Cancel</a>
+        <button type="submit">Save Class Names</button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

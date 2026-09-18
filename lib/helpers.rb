@@ -43,6 +43,7 @@ end
 
 def assignment_due_time(item)
   parse_canvas_time(
+    item.dig("plannable", "todo_date") ||
     item.dig("assignment", "due_at") ||
     item["due_at"] ||
     item["start_at"]
@@ -50,14 +51,16 @@ def assignment_due_time(item)
 end
 
 def assignment_name(item)
-  item.dig("assignment", "name") ||
+  item.dig("plannable", "title") ||
+    item.dig("assignment", "name") ||
     item["name"] ||
     item["title"] ||
     "Untitled Assignment"
 end
 
 def assignment_course_id(item)
-  item.dig("assignment", "course_id") ||
+  item.dig("plannable", "course_id") ||
+    item.dig("assignment", "course_id") ||
     item["course_id"]
 end
 
@@ -68,8 +71,20 @@ def assignment_id(item)
 end
 
 def assignment_url(item)
-  item.dig("assignment", "html_url") ||
+  value = item.dig("assignment", "html_url") ||
     item["html_url"]
+
+  return nil if value.to_s.empty?
+
+  URI.join("#{BASE_URL}/", value).to_s
+rescue URI::InvalidURIError
+  value
+end
+
+def todo_details(item)
+  item.dig("plannable", "details") ||
+    item.dig("plannable", "description") ||
+    ""
 end
 
 # ============================================================
