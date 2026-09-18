@@ -55,7 +55,7 @@
 
   <link
     rel="stylesheet"
-    href="/dashboard.css?v=0.8.0"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
   >
 
   <title>School Dashboard</title>
@@ -65,6 +65,27 @@
   <main class="container">
 
     <%
+      course_name_mappings =
+        begin
+          mappings_file =
+            if File.directory?("/data")
+              "/data/course_name_mappings.json"
+            else
+              File.join(APP_ROOT, "tmp", "course_name_mappings.json")
+            end
+
+          JSON.parse(
+            File.read(mappings_file)
+          )
+        rescue Errno::ENOENT, JSON::ParserError
+          {}
+        end
+
+      display_course_name = lambda do |course_id|
+        canvas_name = course_name(data, course_id).to_s.strip
+        course_name_mappings.fetch(course_id.to_s, canvas_name)
+      end
+
       now = Time.now
       today = now.getlocal.to_date
       tomorrow = today + 1
@@ -102,6 +123,13 @@
       due_tomorrow = incomplete_upcoming.count do |event|
         assignment_due_time(event).getlocal.to_date == tomorrow
       end
+
+      todo = (data["todo"] || []).sort_by do |item|
+        assignment_due_time(item) || Time.at(Float::INFINITY)
+      end
+
+      token_days = token_days_remaining
+      token_expiration_date = token_expiration
     %>
 
     <!-- =====================================================
@@ -109,68 +137,49 @@
          ===================================================== -->
 
     <header class="top-header">
+      <div class="header-copy">
+        <h1>
+          <%= h greeting_for(now) %>,
+          <%= h profile_first_name(data) %>!
+        </h1>
 
-      <div>
-        <h1>📚 School Dashboard</h1>
-
-        <div class="subtitle">
-          <%= Time.now.strftime("%A, %B %-d") %>
-        </div>
+        <div class="subtitle"><%= now.strftime("%A, %B %-d") %></div>
       </div>
 
-      <% days = token_days_remaining %>
-      <% expiration = token_expiration %>
-
-      <% if days %>
-
-        <% if days < 0 %>
-
-          <div class="token-status token-danger">
-            🔑 Canvas token expired
-            <%= days.abs %> days ago
-          </div>
-
-        <% elsif days <= 7 %>
-
-          <div class="token-status token-danger">
-            ⚠️ Canvas token expires in
-            <%= days %> days
-
-            <span>
-              <%= expiration.strftime("%b %-d, %Y") %>
-            </span>
-          </div>
-
-        <% elsif days <= 14 %>
-
-          <div class="token-status token-warning">
-            🔑 Canvas token expires in
-            <%= days %> days
-
-            <span>
-              <%= expiration.strftime("%b %-d, %Y") %>
-            </span>
-          </div>
-
-        <% else %>
-
-          <div class="token-status">
-            🔑 Token:
-            <%= days %> days remaining
-          </div>
-
-        <% end %>
-
-      <% end %>
-
+      <div class="header-date-mark" aria-hidden="true">
+        <span><%= now.strftime("%b") %></span>
+        <strong><%= now.strftime("%-d") %></strong>
+      </div>
     </header>
+
+    <% if token_days && token_days <= 7 %>
+      <div class="token-expiration-alert" role="alert">
+        <div>
+          <strong>
+            <% if token_days < 0 %>
+              Canvas token expired <%= token_days.abs %> days ago.
+            <% elsif token_days == 0 %>
+              Canvas token expires today.
+            <% else %>
+              Canvas token expires in <%= token_days %> days.
+            <% end %>
+          </strong>
+          Refresh the access token to keep dashboard updates working.
+        </div>
+
+        <a
+          href="<%= h "#{BASE_URL}/profile/settings" %>"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Open Canvas Settings
+        </a>
+      </div>
+    <% end %>
 
     <section class="today-summary">
       <div>
-        <h2>
-          <%= h greeting_for(now) %>,
-          <%= h profile_first_name(data) %>! 👋
-        </h2>
+        <h2>Up next</h2>
 
         <p>
           <%= due_today %>
@@ -185,9 +194,13 @@
         </p>
       </div>
 
-      <form method="post" action="/refresh">
+      <form class="refresh-form" method="post" action="/refresh">
         <button class="refresh-button" type="submit">
-          ↻ Refresh Canvas
+          <span class="refresh-button-label">↻ Refresh Canvas</span>
+          <span class="refresh-button-progress" aria-hidden="true">
+            <span class="refresh-spinner"></span>
+            Refreshing…
+          </span>
         </button>
       </form>
     </section>
@@ -212,13 +225,6 @@
         <% else %>
           the last update.
         <% end %>
-      </div>
-
-    <% elsif status[:updated_at] %>
-
-      <div class="system-status good">
-        ✓ Canvas updated
-        <%= status[:updated_at].strftime("%-I:%M %p") %>
       </div>
 
     <% end %>
@@ -281,7 +287,7 @@
               </div>
 
               <div class="assignment-course">
-                <%= h course_name(data, course_id) %>
+                <%= h display_course_name.call(course_id) %>
               </div>
 
             </div>
@@ -309,15 +315,229 @@
     <% end %>
 
     <!-- =====================================================
-         Next 7 Days
+         To-do List
          ===================================================== -->
+
+    <section class="section">
+
+      <div class="section-header">
+        <h2>✅ My To-Dos</h2>
+
+        <div class="section-note">
+          <%= todo.length %> remaining
+        </div>
+      </div>
+
+      <div class="card todo-card">
+
+        <% if todo.empty? %>
+
+          <div class="empty-state">
+            <div class="empty-check">✓</div>
+
+            <div>
+              <strong>To-do list complete.</strong>
+              <span>Nothing needs attention in Canvas.</span>
+            </div>
+          </div>
+
+        <% else %>
+
+          <% todo.each do |item| %>
+            <%
+              course_id = assignment_course_id(item)
+              due = assignment_due_time(item)
+              calendar_date = due ?
+                "#view_name=agenda&view_start=#{due.getlocal.to_date.iso8601}" :
+                ""
+              url = assignment_url(item) ||
+                "#{BASE_URL}/calendar#{calendar_date}"
+            %>
+
+            <div class="todo-row">
+              <form
+                class="todo-complete-form"
+                method="post"
+                action="/todo/complete"
+              >
+                <input
+                  type="hidden"
+                  name="id"
+                  value="<%= h item["plannable_id"] %>"
+                >
+
+                <button
+                  class="todo-checkbox"
+                  type="submit"
+                  title="Mark complete"
+                  aria-label="Mark <%= h assignment_name(item) %> complete"
+                >
+                  ✓
+                </button>
+              </form>
+
+              <div class="assignment-main">
+                <div class="assignment-title">
+                  <a
+                    href="<%= h url %>"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open in Canvas"
+                  >
+                    <%= h assignment_name(item) %>
+                  </a>
+                </div>
+
+                <div class="assignment-course">
+                  <%= h display_course_name.call(course_id) %>
+                </div>
+              </div>
+
+              <% if due %>
+                <div class="assignment-due">
+                  <strong><%= h date_label(due) %></strong>
+                  <span><%= h due_time_label(due) %></span>
+                </div>
+              <% end %>
+
+              <details class="todo-edit">
+                <summary>
+                  <span class="todo-edit-pencil" aria-hidden="true">✎</span>
+                  <span class="todo-edit-label">
+                    Edit <%= h assignment_name(item) %>
+                  </span>
+                  <span class="todo-edit-cancel">
+                    <span aria-hidden="true">&times;</span>
+                    Cancel
+                  </span>
+                </summary>
+
+                <form method="post" action="/todo/update">
+                  <input
+                    type="hidden"
+                    name="id"
+                    value="<%= h item["plannable_id"] %>"
+                  >
+
+                  <label class="todo-title-field">
+                    <span>To-do</span>
+                    <input
+                      type="text"
+                      name="title"
+                      maxlength="255"
+                      value="<%= h assignment_name(item) %>"
+                      required
+                    >
+                  </label>
+
+                  <label>
+                    <span>Date</span>
+                    <input
+                      type="date"
+                      name="todo_date"
+                      value="<%= due ? due.getlocal.to_date.iso8601 : today.iso8601 %>"
+                      required
+                    >
+                  </label>
+
+                  <label>
+                    <span>Course</span>
+                    <select name="course_id">
+                      <option value="">Personal</option>
+                      <% (data["courses"] || []).sort_by { |course| course["name"] }.each do |course| %>
+                        <option
+                          value="<%= h course["id"] %>"
+                          <%= "selected" if course["id"].to_s == course_id.to_s %>
+                        >
+                          <%= h display_course_name.call(course["id"]) %>
+                        </option>
+                      <% end %>
+                    </select>
+                  </label>
+
+                  <label class="todo-details-field">
+                    <span>Details (optional)</span>
+                    <textarea name="details" rows="2"><%= h(item.dig("plannable", "details") || item.dig("plannable", "description") || "") %></textarea>
+                  </label>
+
+                  <button class="todo-save-button" type="submit">
+                    Save Changes
+                  </button>
+                </form>
+              </details>
+            </div>
+          <% end %>
+
+        <% end %>
+
+        <details class="todo-create">
+          <summary>
+            <span class="todo-create-open">+ Add To-Do</span>
+            <span class="todo-create-cancel">
+              <span aria-hidden="true">&times;</span>
+              Cancel
+            </span>
+          </summary>
+
+          <form class="todo-create-form" method="post" action="/todo/create">
+            <label class="todo-title-field">
+              <span>New to-do</span>
+              <input
+                type="text"
+                name="title"
+                maxlength="255"
+                placeholder="What needs to be done?"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                name="todo_date"
+                value="<%= today.iso8601 %>"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Course</span>
+              <select name="course_id">
+                <option value="">Personal</option>
+                <% (data["courses"] || []).sort_by { |course| course["name"] }.each do |course| %>
+                  <option value="<%= h course["id"] %>">
+                    <%= h display_course_name.call(course["id"]) %>
+                  </option>
+                <% end %>
+              </select>
+            </label>
+
+            <label class="todo-details-field">
+              <span>Details (optional)</span>
+              <textarea name="details" rows="2"></textarea>
+            </label>
+
+            <button class="todo-add-button" type="submit">
+              + Add To-Do
+            </button>
+          </form>
+        </details>
+
+      </div>
+
+    </section>
+
+        <!-- =====================================================
+          Upcoming Assignments
+          ===================================================== -->
 
     <section class="section">
 
       <div class="section-header">
 
         <h2>
-          📅 Next 7 Days
+          📅 Upcoming Assignments
         </h2>
 
         <div class="section-note">
@@ -444,7 +664,7 @@
                     </div>
 
                     <div class="assignment-course">
-                      <%= h course_name(data, course_id) %>
+                      <%= h display_course_name.call(course_id) %>
                     </div>
 
                     <div
@@ -505,18 +725,6 @@
           "course_id"
         )
       end
-
-
-      needs_attention = valid_grades.select do |submission|
-        pct = percentage(
-          submission["score"],
-          submission.dig("assignment", "points_possible")
-        )
-
-        pct && pct < 70
-      end.sort_by do |submission|
-        submission["graded_at"] || ""
-      end.reverse.first(5)
     %>
 
     <section class="section">
@@ -532,29 +740,6 @@
         </div>
 
       </div>
-
-      <% unless needs_attention.empty? %>
-        <div class="grade-attention">
-          <div class="eyebrow danger-text">NEEDS ATTENTION</div>
-
-          <% needs_attention.each do |submission| %>
-            <%
-              assignment = submission["assignment"]
-              pct = percentage(
-                submission["score"],
-                assignment["points_possible"]
-              )
-            %>
-            <div>
-              <strong><%= h assignment["name"] %></strong>
-              <span>
-                <%= h course_name(data, assignment["course_id"]) %>
-                · <%= pct %>%
-              </span>
-            </div>
-          <% end %>
-        </div>
-      <% end %>
 
       <% grades_by_course.each do |course_id, submissions| %>
 
@@ -575,6 +760,21 @@
             possible
           )
 
+          grade_letter =
+            if calculated.nil?
+              nil
+            elsif calculated >= 90
+              "A"
+            elsif calculated >= 80
+              "B"
+            elsif calculated >= 70
+              "C"
+            elsif calculated >= 60
+              "D"
+            else
+              "F"
+            end
+
           recent = submissions.sort_by do |submission|
             submission["graded_at"] ||
               submission.dig(
@@ -582,17 +782,17 @@
                 "due_at"
               ) ||
               ""
-          end.reverse.first(5)
+          end.reverse
         %>
 
         <section class="grade-card">
 
-          <div class="grade-header">
+          <div class="grade-header<%= grade_letter ? " grade-#{grade_letter.downcase}" : "" %>">
 
             <div>
 
               <h3>
-                <%= h course_name(data, course_id) %>
+                <%= h display_course_name.call(course_id) %>
               </h3>
 
               <div class="grade-meta">
@@ -609,7 +809,8 @@
 
             <div class="grade-percent">
               <% if calculated %>
-                <%= calculated %>%
+                <span class="grade-value"><%= calculated %>%</span>
+                <span class="grade-letter"><%= grade_letter %></span>
               <% else %>
                 —
               <% end %>
@@ -621,68 +822,89 @@
             RECENT GRADES
           </div>
 
-          <% recent.each do |submission| %>
+          <div class="grade-list">
+            <% recent.each do |submission| %>
 
-            <%
-              assignment = submission["assignment"]
+              <%
+                assignment = submission["assignment"]
 
-              score = submission["score"]
-              points = assignment["points_possible"]
+                score = submission["score"]
+                points = assignment["points_possible"]
 
-              pct = percentage(
-                score,
-                points
-              )
+                pct = percentage(
+                  score,
+                  points
+                )
 
-              url = assignment["html_url"]
-            %>
+                url = assignment["html_url"]
 
-            <div class="grade-row<%= pct && pct < 70 ? " low-grade" : "" %>">
+                grade_class =
+                  if pct && pct < 70
+                    " low-grade"
+                  elsif pct && pct < 80
+                    " warning-grade"
+                  else
+                    ""
+                  end
+              %>
 
-              <div class="assignment-main">
+              <div class="grade-row<%= grade_class %>">
 
-                <div class="assignment-title">
+                <div class="assignment-main">
 
-                  <% if url %>
-                    <a
-                      href="<%= h url %>"
-                      target="_blank"
-                    >
+                  <div class="assignment-title">
+
+                    <% if url %>
+                      <a
+                        href="<%= h url %>"
+                        target="_blank"
+                      >
+                        <%= h assignment["name"] %>
+                      </a>
+                    <% else %>
                       <%= h assignment["name"] %>
-                    </a>
-                  <% else %>
-                    <%= h assignment["name"] %>
+                    <% end %>
+
+                  </div>
+
+                  <div class="assignment-course">
+                    <%= h grade_date(
+                      submission["graded_at"] ||
+                      assignment["due_at"]
+                    ) %>
+                  </div>
+
+                </div>
+
+                <div class="grade-score">
+
+                  <strong>
+                    <%= h format_number(score) %>
+                    /
+                    <%= h format_number(points) %>
+                  </strong>
+
+                  <% if pct %>
+                    <span<%= pct == 100 ? ' class="perfect-score" title="Perfect score!"' : "" %>>
+                      <%= pct %>%
+                    </span>
                   <% end %>
 
                 </div>
 
-                <div class="assignment-course">
-                  <%= h grade_date(
-                    submission["graded_at"] ||
-                    assignment["due_at"]
-                  ) %>
-                </div>
-
               </div>
 
-              <div class="grade-score">
+            <% end %>
+          </div>
 
-                <strong>
-                  <%= h format_number(score) %>
-                  /
-                  <%= h format_number(points) %>
-                </strong>
-
-                <% if pct %>
-                  <span>
-                    <%= pct %>%
-                  </span>
-                <% end %>
-
-              </div>
-
-            </div>
-
+          <% if recent.length > 5 %>
+            <button
+              class="grade-more-button"
+              type="button"
+              hidden
+            >
+              See more
+            </button>
           <% end %>
 
         </section>
@@ -691,6 +913,83 @@
 
     </section>
 
+    <footer class="site-footer">
+      <% if status[:updated_at] %>
+        <div class="canvas-update-footer">
+          <span aria-hidden="true"></span>
+          Canvas updated <%= status[:updated_at].strftime("%-I:%M %p") %>
+        </div>
+      <% end %>
+
+      <% if token_days %>
+        <div class="token-footer">
+          🔑 Canvas token:
+          <% if token_days < 0 %>
+            expired <%= token_days.abs %> days ago
+          <% else %>
+            <%= token_days %> days remaining
+          <% end %>
+
+          <% if token_expiration_date %>
+            <span>
+              Expires <%= token_expiration_date.strftime("%b %-d, %Y") %>
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+
+      <a class="class-names-link" href="/class-names">
+        Edit Class Names
+      </a>
+    </footer>
+
   </main>
+
+  <script>
+    document.querySelector(".refresh-form").addEventListener("submit", (event) => {
+      const button = event.currentTarget.querySelector(".refresh-button");
+
+      button.classList.add("is-refreshing");
+      button.disabled = true;
+      button.setAttribute("aria-label", "Refreshing Canvas");
+    });
+
+    document.querySelectorAll(".todo-complete-form").forEach((form) => {
+      form.addEventListener("submit", () => {
+        const row = form.closest(".todo-row");
+        const button = form.querySelector(".todo-checkbox");
+
+        row.classList.add("is-completing");
+        button.disabled = true;
+        button.setAttribute("aria-label", "Marking to-do complete");
+      });
+    });
+
+    document.querySelectorAll(".grade-card").forEach((card) => {
+      const rows = Array.from(
+        card.querySelectorAll(".grade-list > .grade-row")
+      );
+      const button = card.querySelector(".grade-more-button");
+
+      if (!button || rows.length <= 5) return;
+
+      let visibleCount = 5;
+      rows.slice(visibleCount).forEach((row) => {
+        row.hidden = true;
+      });
+      button.hidden = false;
+
+      button.addEventListener("click", () => {
+        const nextCount = Math.min(visibleCount + 5, rows.length);
+
+        rows.slice(visibleCount, nextCount).forEach((row) => {
+          row.hidden = false;
+        });
+
+        visibleCount = nextCount;
+        button.hidden = visibleCount >= rows.length;
+      });
+    });
+  </script>
 </body>
 </html>

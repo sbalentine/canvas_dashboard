@@ -51,6 +51,21 @@ def fetch_dashboard_data
     "/api/v1/users/self/upcoming_events?per_page=100"
   )
 
+  planner_start = (Date.today - 30).iso8601
+  planner_end = (Date.today + 90).iso8601
+
+  planner_items = canvas_get(
+    "/api/v1/planner/items" \
+    "?start_date=#{planner_start}" \
+    "&end_date=#{planner_end}" \
+    "&filter=incomplete_items" \
+    "&per_page=100"
+  )
+
+  todo = planner_items.select do |item|
+    item["plannable_type"] == "planner_note"
+  end
+
   # ----------------------------------------------------------
   # Course names
   # ----------------------------------------------------------
@@ -134,6 +149,7 @@ def fetch_dashboard_data
     "grades" => grades,
     "missing" => missing,
     "upcoming" => upcoming,
+    "todo" => todo,
     "submissions" => submissions,
     "updated_at" => Time.now.iso8601
   }

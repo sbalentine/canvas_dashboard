@@ -5,6 +5,7 @@ A lightweight, family-friendly dashboard for [Canvas LMS](https://www.instructur
 The dashboard provides a simple view of the school information that matters most day-to-day:
 
 * ⚠️ Missing assignments
+* ✅ Canvas to-do list with completion controls
 * 📅 Assignments due in the next 7 days
 * ✅ Submission status
 * 📊 Grades and recent scores
@@ -57,6 +58,10 @@ This dashboard uses the Canvas API to collect that information and present it on
 
 Missing work is displayed prominently at the top of the dashboard so it is difficult to overlook.
 
+### ✅ Canvas To-do List
+
+Shows the student's incomplete Canvas planner notes. To-dos can be created, edited, and marked complete from the dashboard, with each change saved back to Canvas.
+
 ### 📅 Upcoming Assignments
 
 Shows assignments due during the next seven days, including:
@@ -96,6 +101,10 @@ The dashboard can display the number of days remaining before the configured Can
 ### 📱 iPad / Mobile Support
 
 The interface is responsive and includes PWA/mobile metadata so it can be added to an iPad Home Screen for quick access.
+
+### Course Name Mappings
+
+Use **Edit Class Names** at the bottom of the dashboard to replace long Canvas course names with shorter labels. Aliases are stored by Canvas course ID in `/data/course_name_mappings.json` for the Home Assistant add-on or `tmp/course_name_mappings.json` locally. Both locations are excluded from source control. Blank aliases use the full Canvas course name.
 
 ---
 

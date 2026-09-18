@@ -85,3 +85,40 @@ def canvas_get(path)
 
   JSON.parse(response.body)
 end
+
+def canvas_form_request(method, path, fields)
+  uri = URI("#{BASE_URL}#{path}")
+
+  request_class =
+    case method
+    when :post
+      Net::HTTP::Post
+    when :put
+      Net::HTTP::Put
+    else
+      raise ArgumentError, "Unsupported Canvas request method"
+    end
+
+  request = request_class.new(uri)
+  request["Authorization"] = "Bearer #{TOKEN}"
+  request.set_form_data(fields)
+
+  response = Net::HTTP.start(
+    uri.hostname,
+    uri.port,
+    use_ssl: true,
+    open_timeout: 10,
+    read_timeout: 30
+  ) do |http|
+    http.request(request)
+  end
+
+  unless response.is_a?(Net::HTTPSuccess)
+    raise(
+      "Canvas API error: " \
+      "#{response.code} #{response.message}"
+    )
+  end
+
+  JSON.parse(response.body)
+end
