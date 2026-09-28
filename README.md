@@ -300,7 +300,7 @@ bundle install
 bundle exec ruby test/run.rb
 ```
 
-The suite does not contact Canvas. GitHub Actions runs it on Ruby 3.3 and 3.4 and builds the ARM64 Home Assistant image for every push and pull request.
+The suite does not contact Canvas. GitHub Actions runs it on the latest Ruby version pinned in `.ruby-version` and builds the ARM64 Home Assistant image for every push and pull request.
 
 The first launch may briefly display a waiting message while the initial Canvas API request completes.
 
