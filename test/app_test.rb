@@ -80,6 +80,7 @@ class AppTest < Minitest::Test
     css = File.read(File.join(APP_ROOT, "public", "dashboard.css"))
     controls = css[/\.todo-create-form input,.*?\n\}/m]
 
+    refute_nil controls
     assert_includes controls, "min-width: 0;"
     assert_includes controls, "max-width: 100%;"
   end
