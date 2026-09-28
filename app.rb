@@ -7,16 +7,20 @@ APP_ROOT = File.expand_path(__dir__)
 require_relative "lib/canvas"
 require_relative "lib/helpers"
 require_relative "lib/course_name_mappings"
+require_relative "lib/event_journal"
 require_relative "lib/dashboard_data"
 
 # ============================================================
 # Startup
 # ============================================================
 
-puts "Starting School Dashboard..."
+if $PROGRAM_NAME == __FILE__
+  puts "Starting School Dashboard..."
 
-initialize_dashboard_data
-start_refresh_thread
+  initialize_dashboard_data
+  initialize_event_journal
+  start_refresh_thread
+end
 
 # ============================================================
 # Web Server
@@ -31,6 +35,8 @@ server = WEBrick::HTTPServer.new(
     WEBrick::Log::INFO
   )
 )
+
+DASHBOARD_SERVER = server
 
 # ============================================================
 # Dashboard
@@ -365,6 +371,88 @@ rescue => e
 end
 
 # ============================================================
+# Home Assistant API
+# ============================================================
+
+server.mount_proc "/api/status" do |request, response|
+  unless request.request_method == "GET"
+    response.status = 405
+    response["Allow"] = "GET"
+    response.body = "Method not allowed"
+    next
+  end
+
+  data = dashboard_data || {}
+  now = Time.now
+  today = now.getlocal.to_date
+  tomorrow = today + 1
+
+  incomplete_upcoming = Array(data["upcoming"]).reject do |assignment|
+    submission_complete?(
+      submission_for(
+        data,
+        assignment_course_id(assignment),
+        assignment_id(assignment)
+      )
+    )
+  end
+
+  latest_event = dashboard_events.last
+
+  response.status = 200
+  response["Content-Type"] = "application/json; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = JSON.generate(
+    {
+      "updated_at" => dashboard_status[:updated_at]&.iso8601,
+      "canvas_available" => !data.empty? && dashboard_status[:error].nil?,
+      "missing_count" => Array(data["missing"]).length,
+      "due_today_count" => incomplete_upcoming.count do |assignment|
+        assignment_due_time(assignment)&.getlocal&.to_date == today
+      end,
+      "due_tomorrow_count" => incomplete_upcoming.count do |assignment|
+        assignment_due_time(assignment)&.getlocal&.to_date == tomorrow
+      end,
+      "latest_event_id" => latest_event&.dig("id") || 0,
+      "latest_event" => latest_event
+    }
+  )
+end
+
+server.mount_proc "/api/events" do |request, response|
+  unless request.request_method == "GET"
+    response.status = 405
+    response["Allow"] = "GET"
+    response.body = "Method not allowed"
+    next
+  end
+
+  after_value = request.query["after"].to_s
+  limit_value = request.query.fetch("limit", "100").to_s
+
+  unless (after_value.empty? || after_value.match?(/\A\d+\z/)) &&
+      limit_value.match?(/\A\d+\z/)
+    response.status = 400
+    response.body = "Invalid query parameters"
+    next
+  end
+
+  after_id = after_value.empty? ? nil : after_value.to_i
+  limit = [[limit_value.to_i, 1].max, 100].min
+  events = dashboard_events(after_id: after_id).last(limit)
+
+  response.status = 200
+  response["Content-Type"] = "application/json; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = JSON.generate(
+    {
+      "events" => events,
+      "latest_event_id" => dashboard_events.last&.dig("id") || 0
+    }
+  )
+end
+
+# ============================================================
 # CSS
 # ============================================================
 
@@ -429,19 +517,21 @@ end
 # Shutdown
 # ============================================================
 
-trap("TERM") do
-  puts "Stopping School Dashboard..."
-  server.shutdown
+if $PROGRAM_NAME == __FILE__
+  trap("TERM") do
+    puts "Stopping School Dashboard..."
+    server.shutdown
+  end
+
+  trap("INT") do
+    puts "Stopping School Dashboard..."
+    server.shutdown
+  end
+
+  puts(
+    "School Dashboard listening on port " \
+    "#{server.config[:Port]}"
+  )
+
+  server.start
 end
-
-trap("INT") do
-  puts "Stopping School Dashboard..."
-  server.shutdown
-end
-
-puts(
-  "School Dashboard listening on port " \
-  "#{server.config[:Port]}"
-)
-
-server.start

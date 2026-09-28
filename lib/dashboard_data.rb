@@ -5,7 +5,7 @@ require "fileutils"
 
 REFRESH_INTERVAL = 600
 
-CACHE_FILE =
+CACHE_FILE = ENV.fetch("CACHE_FILE") do
   if File.directory?("/data")
     "/data/canvas_cache.json"
   else
@@ -14,11 +14,13 @@ CACHE_FILE =
       __dir__
     )
   end
+end
 
 $dashboard_data = nil
 $last_successful_update = nil
 $last_refresh_error = nil
 $data_mutex = Mutex.new
+$refresh_mutex = Mutex.new
 
 # ============================================================
 # Fetch Canvas Data
@@ -195,23 +197,29 @@ end
 # ============================================================
 
 def refresh_dashboard
-  data = fetch_dashboard_data
+  $refresh_mutex.synchronize do
+    previous_data = dashboard_data
+    data = fetch_dashboard_data
+    events = detect_dashboard_events(previous_data, data)
 
-  save_cache(data)
+    save_cache(data)
+    append_dashboard_events(events)
 
-  $data_mutex.synchronize do
-    $dashboard_data = data
+    $data_mutex.synchronize do
+      $dashboard_data = data
 
-    $last_successful_update =
-      Time.parse(data["updated_at"])
+      $last_successful_update =
+        Time.parse(data["updated_at"])
 
-    $last_refresh_error = nil
+      $last_refresh_error = nil
+    end
+
+    puts(
+      "Canvas refresh successful at " \
+      "#{$last_successful_update}; " \
+      "#{events.length} new event(s)"
+    )
   end
-
-  puts(
-    "Canvas refresh successful at " \
-    "#{$last_successful_update}"
-  )
 
 rescue => e
   puts(
