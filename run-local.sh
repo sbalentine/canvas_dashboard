@@ -17,4 +17,4 @@ set -a
 . ./.env
 set +a
 
-exec ruby app.rb
+exec ruby canvas_dashboard/app.rb

@@ -169,49 +169,41 @@ automation:
 
 ```text
 canvas-school-dashboard/
-├── app.rb
-├── Dockerfile
-├── config.yaml
-├── run.sh
+├── repository.yaml
 ├── run-local.sh
-│
-├── lib/
-│   ├── canvas.rb
-│   ├── dashboard_data.rb
-│   └── helpers.rb
-│
-├── views/
-│   └── dashboard.erb
-│
-├── public/
-│   ├── dashboard.css
-│   └── school-icon.svg
-│
-└── tmp/
-    └── canvas_cache.json   # Local only; ignored by Git
+├── test/
+└── canvas_dashboard/
+  ├── app.rb
+  ├── Dockerfile
+  ├── config.yaml
+  ├── run.sh
+  ├── lib/
+  ├── views/
+  ├── public/
+  └── tmp/                # Local only; ignored by Git
 ```
 
-### `app.rb`
+### `canvas_dashboard/app.rb`
 
 Starts the WEBrick web server and defines the dashboard, stylesheet, icon, and PWA manifest routes.
 
-### `lib/canvas.rb`
+### `canvas_dashboard/lib/canvas.rb`
 
 Handles Canvas configuration, authentication, API requests, and token expiration.
 
-### `lib/dashboard_data.rb`
+### `canvas_dashboard/lib/dashboard_data.rb`
 
 Retrieves Canvas data, builds the dashboard data model, caches successful responses, and manages the background refresh process.
 
-### `lib/helpers.rb`
+### `canvas_dashboard/lib/helpers.rb`
 
 Contains presentation and assignment helpers such as date formatting, score formatting, course names, and submission status.
 
-### `views/dashboard.erb`
+### `canvas_dashboard/views/dashboard.erb`
 
 The HTML/ERB dashboard interface.
 
-### `public/dashboard.css`
+### `canvas_dashboard/public/dashboard.css`
 
 Dashboard styling and responsive layout.
 
@@ -307,7 +299,7 @@ The first launch may briefly display a waiting message while the initial Canvas 
 After a successful refresh, local cached data is stored at:
 
 ```text
-tmp/canvas_cache.json
+canvas_dashboard/tmp/canvas_cache.json
 ```
 
 The `tmp` directory is ignored by Git.
@@ -316,19 +308,22 @@ The `tmp` directory is ignored by Git.
 
 # Home Assistant Installation
 
-The dashboard can run continuously as a local Home Assistant add-on.
+The dashboard can run continuously as a Home Assistant app installed directly from GitHub.
 
 This is particularly useful when Home Assistant OS is running on an always-on Raspberry Pi.
 
-## Add-on Directory
+## Add the Repository
 
-Place the project in the Home Assistant local add-ons directory:
+1. In Home Assistant, open **Settings → Apps → Install app**.
+2. Open the three-dot menu and select **Repositories**.
+3. Add this repository URL:
 
 ```text
-/addons/canvas_dashboard/
+https://github.com/sbalentine/canvas_dashboard
 ```
 
-Home Assistant should then see the project as a local add-on.
+4. Refresh the app store and select **School Dashboard**.
+5. Install the app and enter the Canvas configuration below.
 
 ---
 
@@ -340,8 +335,9 @@ Example:
 
 ```yaml
 name: "School Dashboard"
-description: "Local Canvas LMS school dashboard"
-version: "0.4.0"
+description: "Canvas LMS school dashboard"
+version: "0.9.0"
+url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
 
@@ -457,7 +453,7 @@ BASE_URL = "https://your-school.instructure.com"
 inside:
 
 ```text
-lib/canvas.rb
+canvas_dashboard/lib/canvas.rb
 ```
 
 If you're using this project with another school or Canvas installation, change `BASE_URL` to your institution's Canvas URL.
@@ -514,10 +510,10 @@ http://localhost:4567
 Check Ruby syntax:
 
 ```bash
-ruby -c app.rb
-ruby -c lib/canvas.rb
-ruby -c lib/helpers.rb
-ruby -c lib/dashboard_data.rb
+ruby -c canvas_dashboard/app.rb
+ruby -c canvas_dashboard/lib/canvas.rb
+ruby -c canvas_dashboard/lib/helpers.rb
+ruby -c canvas_dashboard/lib/dashboard_data.rb
 ```
 
 Then commit:
@@ -528,7 +524,7 @@ git commit -m "Describe the change"
 git push
 ```
 
-Once the changes are working locally, update the Home Assistant copy and rebuild the add-on.
+Once the changes are working locally, increase the version in `canvas_dashboard/config.yaml` and push the changes. Home Assistant will then offer the new version as an update.
 
 ---
 

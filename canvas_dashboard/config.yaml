@@ -1,6 +1,7 @@
 name: "School Dashboard"
-description: "Local Canvas LMS school dashboard"
-version: "0.8.0"
+description: "Canvas LMS school dashboard"
+version: "0.9.0"
+url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
 arch:

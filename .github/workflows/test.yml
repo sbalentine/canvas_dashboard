@@ -46,7 +46,7 @@ jobs:
       - name: Build ARM64 add-on image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./canvas_dashboard
           platforms: linux/arm64
           push: false
           cache-from: type=gha
