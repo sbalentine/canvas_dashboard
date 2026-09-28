@@ -11,6 +11,7 @@ The dashboard provides a simple view of the school information that matters most
 * 📊 Grades and recent scores
 * 🔑 Canvas API token expiration
 * 💾 Cached data when Canvas is temporarily unavailable
+* 🏠 Home Assistant status and change-event API
 * 📱 Mobile and iPad-friendly interface
 
 It was designed to run continuously as a **Home Assistant add-on on a Raspberry Pi**, but it can also be run locally on macOS or another machine with Ruby.
@@ -105,6 +106,62 @@ The interface is responsive and includes PWA/mobile metadata so it can be added 
 ### Course Name Mappings
 
 Use **Edit Class Names** at the bottom of the dashboard to replace long Canvas course names with shorter labels. Aliases are stored by Canvas course ID in `/data/course_name_mappings.json` for the Home Assistant add-on or `tmp/course_name_mappings.json` locally. Both locations are excluded from source control. Blank aliases use the full Canvas course name.
+
+### Home Assistant Events
+
+The dashboard compares consecutive successful Canvas refreshes and keeps the latest 500 changes in `/data/event_journal.json`. The first refresh establishes a baseline and does not create events.
+
+Available event types are:
+
+* `assignment_missing`
+* `assignment_no_longer_missing`
+* `assignment_submitted`
+* `grade_posted`
+* `grade_changed`
+* `due_date_changed`
+* `teacher_feedback_added`
+
+`GET /api/status` returns dashboard counts and the latest event. `GET /api/events?after=42&limit=100` returns events after a known event ID.
+
+A Home Assistant REST sensor can use the latest event ID as its state, causing automations to trigger once whenever a new event appears:
+
+```yaml
+rest:
+  - resource: http://HOME_ASSISTANT_HOST:4567/api/status
+    scan_interval: 60
+    sensor:
+      - name: School Dashboard Event
+        value_template: "{{ value_json.latest_event_id }}"
+        json_attributes:
+          - latest_event
+          - missing_count
+          - due_today_count
+          - due_tomorrow_count
+          - canvas_available
+```
+
+Replace `HOME_ASSISTANT_HOST` with the hostname or IP address that exposes the add-on port. `localhost` is only correct when Home Assistant and this process share a network namespace.
+
+Example automation trigger:
+
+```yaml
+automation:
+  - alias: School grade posted
+    triggers:
+      - trigger: state
+        entity_id: sensor.school_dashboard_event
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ trigger.to_state.attributes.get('latest_event', {}).get('type') == 'grade_posted' }}
+    actions:
+      - action: notify.mobile_app_parent_phone
+        data:
+          title: New Canvas grade
+          message: >-
+            {{ trigger.to_state.attributes.latest_event.assignment_name }}:
+            {{ trigger.to_state.attributes.latest_event.score }} points
+```
 
 ---
 
@@ -233,6 +290,17 @@ Open:
 ```text
 http://localhost:4567
 ```
+
+### Running Tests
+
+Install the development dependencies and run the test suite:
+
+```bash
+bundle install
+bundle exec ruby test/run.rb
+```
+
+The suite does not contact Canvas. GitHub Actions runs it on Ruby 3.3 and 3.4 and builds the ARM64 Home Assistant image for every push and pull request.
 
 The first launch may briefly display a waiting message while the initial Canvas API request completes.
 
