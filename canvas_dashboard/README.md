@@ -2,6 +2,8 @@
 
 A family-friendly Canvas LMS dashboard for Home Assistant.
 
+The app includes a branded icon and logo for the Home Assistant app store and app details page.
+
 ## Configuration
 
 Set `canvas_token` to the student's Canvas API token. Set `token_expires` to the token expiration date in `YYYY-MM-DD` format.
