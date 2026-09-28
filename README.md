@@ -13,6 +13,7 @@ The dashboard provides a simple view of the school information that matters most
 * 💾 Cached data when Canvas is temporarily unavailable
 * 🏠 Home Assistant status and change-event API
 * 📱 Mobile and iPad-friendly interface
+* 🎓 Branded Home Assistant app-store artwork
 
 It was designed to run continuously as a **Home Assistant add-on on a Raspberry Pi**, but it can also be run locally on macOS or another machine with Ruby.
 

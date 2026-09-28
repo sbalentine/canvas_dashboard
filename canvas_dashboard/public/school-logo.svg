@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 200">
+  <rect x="2" y="2" width="496" height="196" rx="36" fill="#29315f"/>
+  <rect x="20" y="20" width="160" height="160" rx="34" fill="#5b67d6"/>
+  <path d="M100 54L43 83l57 29 46-24v36h11V83l-57-29z" fill="white"/>
+  <path d="M65 98v29c0 12 16 22 35 22s35-10 35-22V98l-35 18-35-18z" fill="white"/>
+  <rect x="201" y="49" width="6" height="102" rx="3" fill="#f5c451"/>
+  <text x="231" y="91" fill="white" font-family="Avenir Next, Trebuchet MS, sans-serif" font-size="38" font-weight="700">SCHOOL</text>
+  <text x="231" y="137" fill="#f5c451" font-family="Avenir Next, Trebuchet MS, sans-serif" font-size="32" font-weight="600">DASHBOARD</text>
+</svg>
