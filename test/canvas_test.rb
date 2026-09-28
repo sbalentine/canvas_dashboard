@@ -32,6 +32,45 @@ class CanvasTest < Minitest::Test
     ENV.delete("TOKEN_EXPIRES")
   end
 
+  def test_base_url_uses_environment
+    ENV["CANVAS_URL"] = " https://example.instructure.com/ "
+
+    assert_equal "https://example.instructure.com", load_base_url
+  ensure
+    ENV["CANVAS_URL"] = "https://temecula.instructure.com"
+  end
+
+  def test_base_url_uses_home_assistant_options
+    ENV["CANVAS_URL"] = "https://environment.instructure.com"
+    options_path = "/data/options.json"
+    exist = ->(path) { path == options_path }
+    read = lambda do |path|
+      assert_equal options_path, path
+      JSON.generate("canvas_url" => "https://ha.instructure.com")
+    end
+
+    result = with_replaced_method(File, :exist?, exist) do
+      with_replaced_method(File, :read, read) { load_base_url }
+    end
+
+    assert_equal "https://ha.instructure.com", result
+  ensure
+    ENV["CANVAS_URL"] = "https://temecula.instructure.com"
+  end
+
+  def test_missing_or_blank_base_url
+    [nil, " "].each do |value|
+      value.nil? ? ENV.delete("CANVAS_URL") : ENV["CANVAS_URL"] = value
+
+      error = assert_raises(RuntimeError) { load_base_url }
+      assert_match(/Canvas base URL is not configured/, error.message)
+      assert_match(/CANVAS_URL/, error.message)
+      assert_match(/canvas_url in Home Assistant/, error.message)
+    end
+  ensure
+    ENV["CANVAS_URL"] = "https://temecula.instructure.com"
+  end
+
   def test_canvas_get_sends_bearer_token_and_parses_json
     response = http_response(Net::HTTPOK, '{"id":123}', "200", "OK")
     request_seen = nil

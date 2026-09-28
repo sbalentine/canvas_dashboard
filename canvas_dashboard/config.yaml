@@ -14,8 +14,10 @@ ports_description:
 map:
   - addon_config:rw
 options:
+  canvas_url: ""
   canvas_token: ""
   token_expires: ""
 schema:
+  canvas_url: str
   canvas_token: password
   token_expires: str

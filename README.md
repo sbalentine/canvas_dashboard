@@ -264,6 +264,7 @@ The exact location depends on how your school configures Canvas, but Canvas norm
 Create a `.env` file in the project root:
 
 ```bash
+CANVAS_URL='https://your-school.instructure.com'
 CANVAS_TOKEN='your-canvas-token'
 TOKEN_EXPIRES='YYYY-MM-DD'
 ```
@@ -271,6 +272,7 @@ TOKEN_EXPIRES='YYYY-MM-DD'
 For example:
 
 ```bash
+CANVAS_URL='https://your-school.instructure.com'
 CANVAS_TOKEN='your-secret-token-here'
 TOKEN_EXPIRES='2026-12-14'
 ```
@@ -370,15 +372,17 @@ map:
   - addon_config:rw
 
 options:
+  canvas_url: ""
   canvas_token: ""
   token_expires: ""
 
 schema:
+  canvas_url: str
   canvas_token: password
   token_expires: str
 ```
 
-Configure the Canvas token and expiration date through the Home Assistant add-on configuration.
+Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration.
 
 The token is provided to the application through Home Assistant's `/data/options.json` and does **not** need to be stored in the Git repository.
 
@@ -424,6 +428,7 @@ Expected options:
 
 ```json
 {
+  "canvas_url": "https://your-school.instructure.com",
   "canvas_token": "...",
   "token_expires": "YYYY-MM-DD"
 }
@@ -434,6 +439,7 @@ Expected options:
 Local development uses environment variables:
 
 ```text
+CANVAS_URL
 CANVAS_TOKEN
 TOKEN_EXPIRES
 ```
@@ -460,19 +466,7 @@ The application currently retrieves information including:
 * Upcoming events/assignments
 * Submission information for upcoming assignments
 
-The Canvas instance URL is configured in:
-
-```ruby
-BASE_URL = "https://your-school.instructure.com"
-```
-
-inside:
-
-```text
-canvas_dashboard/lib/canvas.rb
-```
-
-If you're using this project with another school or Canvas installation, change `BASE_URL` to your institution's Canvas URL.
+The Canvas instance URL (for example `https://your-school.instructure.com`) is configured with the `canvas_url` add-on option in Home Assistant, or the `CANVAS_URL` environment variable for local development and tests. The application will not start if it is missing or blank.
 
 ---
 
