@@ -46,7 +46,22 @@ def load_base_url
     )
   end
 
-  url.strip.sub(%r{/+\z}, "")
+  url = url.strip.sub(%r{/+\z}, "")
+  uri = URI.parse(url)
+
+  unless uri.is_a?(URI::HTTPS) && !uri.host.to_s.empty?
+    raise(
+      "Canvas base URL must be an https URL, " \
+      "for example https://your-school.instructure.com."
+    )
+  end
+
+  url
+rescue URI::InvalidURIError
+  raise(
+    "Canvas base URL must be an https URL, " \
+    "for example https://your-school.instructure.com."
+  )
 end
 
 def token_expiration
