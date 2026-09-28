@@ -112,6 +112,8 @@ Use **Edit Class Names** at the bottom of the dashboard to replace long Canvas c
 
 The dashboard compares consecutive successful Canvas refreshes and keeps the latest 500 changes in `/data/event_journal.json`. The first refresh establishes a baseline and does not create events.
 
+When installed as a Home Assistant app, every change is also fired on Home Assistant's event bus as `school_dashboard_activity`. No REST sensor or YAML configuration is required. In **Settings → Automations & scenes**, create an automation with an **Event** trigger, enter `school_dashboard_activity` as the event type, and add a phone notification action.
+
 Available event types are:
 
 * `assignment_missing`
@@ -122,9 +124,22 @@ Available event types are:
 * `due_date_changed`
 * `teacher_feedback_added`
 
-`GET /api/status` returns dashboard counts and the latest event. `GET /api/events?after=42&limit=100` returns events after a known event ID.
+Event data is available to automation templates under `trigger.event.data`. For example:
 
-A Home Assistant REST sensor can use the latest event ID as its state, causing automations to trigger once whenever a new event appears:
+```jinja
+{{ trigger.event.data.assignment_name }}
+in {{ trigger.event.data.course_name }}
+```
+
+To filter an automation to one kind of activity, add this template condition and replace `grade_posted` with the desired event type:
+
+```jinja
+{{ trigger.event.data.type == 'grade_posted' }}
+```
+
+The REST API remains available for external integrations. `GET /api/status` returns dashboard counts and the latest event. `GET /api/events?after=42&limit=100` returns events after a known event ID.
+
+A REST sensor can use the latest event ID as its state when the dashboard runs outside Home Assistant:
 
 ```yaml
 rest:
