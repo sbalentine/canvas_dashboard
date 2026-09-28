@@ -71,6 +71,17 @@ class CanvasTest < Minitest::Test
     ENV["CANVAS_URL"] = "https://temecula.instructure.com"
   end
 
+  def test_invalid_base_url
+    ["temecula.instructure.com", "http://temecula.instructure.com", "https://", "https://bad host"].each do |value|
+      ENV["CANVAS_URL"] = value
+
+      error = assert_raises(RuntimeError) { load_base_url }
+      assert_match(/must be an https URL/, error.message)
+    end
+  ensure
+    ENV["CANVAS_URL"] = "https://temecula.instructure.com"
+  end
+
   def test_canvas_get_sends_bearer_token_and_parses_json
     response = http_response(Net::HTTPOK, '{"id":123}', "200", "OK")
     request_seen = nil
