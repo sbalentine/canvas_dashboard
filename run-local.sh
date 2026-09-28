@@ -8,6 +8,7 @@ if [ ! -f ".env" ]; then
   echo "Missing .env file."
   echo
   echo "Create .env with:"
+  echo "CANVAS_URL='https://your-school.instructure.com'"
   echo "CANVAS_TOKEN='your-token'"
   echo "TOKEN_EXPIRES='YYYY-MM-DD'"
   exit 1

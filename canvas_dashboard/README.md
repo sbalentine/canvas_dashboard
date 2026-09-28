@@ -6,7 +6,7 @@ The app includes a branded icon and logo for the Home Assistant app store and ap
 
 ## Configuration
 
-Set `canvas_token` to the student's Canvas API token. Set `token_expires` to the token expiration date in `YYYY-MM-DD` format.
+Set `canvas_url` to your school's Canvas URL (for example `https://your-school.instructure.com`). Set `canvas_token` to the student's Canvas API token. Set `token_expires` to the token expiration date in `YYYY-MM-DD` format.
 
 The web interface is exposed on port `4567`. Successful Canvas responses, class-name mappings, and the event journal are retained in the add-on data directory.
 
