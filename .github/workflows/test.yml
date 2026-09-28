@@ -14,15 +14,8 @@ concurrency:
 
 jobs:
   test:
-    name: Ruby ${{ matrix.ruby }}
+    name: Latest Ruby
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        ruby:
-          - "3.3"
-          - "3.4"
 
     steps:
       - name: Check out repository
@@ -31,7 +24,6 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
 
       - name: Run tests
