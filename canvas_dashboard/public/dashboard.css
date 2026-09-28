@@ -423,6 +423,8 @@ a:hover {
 .todo-edit input,
 .todo-edit select,
 .todo-edit textarea {
+  min-width: 0;
+  max-width: 100%;
   width: 100%;
   min-height: 40px;
   padding: 8px 10px;

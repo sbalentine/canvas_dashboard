@@ -75,4 +75,12 @@ class AppTest < Minitest::Test
     assert_includes html, "Quiz &lt;One&gt;"
     refute_includes html, "Quiz <One>"
   end
+
+  def test_todo_form_controls_are_constrained_to_their_grid_columns
+    css = File.read(File.join(APP_ROOT, "public", "dashboard.css"))
+    controls = css[/\.todo-create-form input,.*?\n\}/m]
+
+    assert_includes controls, "min-width: 0;"
+    assert_includes controls, "max-width: 100%;"
+  end
 end
