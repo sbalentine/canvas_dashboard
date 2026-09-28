@@ -1,4 +1,5 @@
 ENV["CANVAS_TOKEN"] = "test-token"
+ENV["CANVAS_URL"] = "https://temecula.instructure.com"
 ENV["PORT"] = "0"
 
 require "minitest/autorun"

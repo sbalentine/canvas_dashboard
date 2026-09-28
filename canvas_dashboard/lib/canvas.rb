@@ -3,8 +3,6 @@ require "json"
 require "uri"
 require "date"
 
-BASE_URL = "https://temecula.instructure.com"
-
 # ============================================================
 # Configuration
 # ============================================================
@@ -17,7 +15,8 @@ def options
   else
     {
       "canvas_token" => ENV["CANVAS_TOKEN"],
-      "token_expires" => ENV["TOKEN_EXPIRES"]
+      "token_expires" => ENV["TOKEN_EXPIRES"],
+      "canvas_url" => ENV["CANVAS_URL"]
     }
   end
 end
@@ -34,6 +33,20 @@ def load_token
   end
 
   token
+end
+
+def load_base_url
+  url = options["canvas_url"]
+
+  if url.nil? || url.strip.empty?
+    raise(
+      "Canvas base URL is not configured. " \
+      "Set CANVAS_URL locally or configure " \
+      "canvas_url in Home Assistant."
+    )
+  end
+
+  url.strip.sub(%r{/+\z}, "")
 end
 
 def token_expiration
@@ -54,6 +67,7 @@ def token_days_remaining
   (expiration - Date.today).to_i
 end
 
+BASE_URL = load_base_url
 TOKEN = load_token
 
 # ============================================================
