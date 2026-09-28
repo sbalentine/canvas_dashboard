@@ -10,7 +10,7 @@ ENV["CACHE_FILE"] = File.join(TEST_TMP_DIR, "canvas_cache.json")
 ENV["EVENT_JOURNAL_FILE"] = File.join(TEST_TMP_DIR, "event_journal.json")
 ENV["COURSE_NAME_MAPPINGS_FILE"] = File.join(TEST_TMP_DIR, "course_names.json")
 
-require_relative "../app"
+require_relative "../canvas_dashboard/app"
 
 Minitest.after_run do
   FileUtils.remove_entry(TEST_TMP_DIR) if File.exist?(TEST_TMP_DIR)
