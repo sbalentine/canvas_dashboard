@@ -8,6 +8,7 @@ require_relative "lib/canvas"
 require_relative "lib/helpers"
 require_relative "lib/course_name_mappings"
 require_relative "lib/event_journal"
+require_relative "lib/home_assistant_events"
 require_relative "lib/dashboard_data"
 
 # ============================================================

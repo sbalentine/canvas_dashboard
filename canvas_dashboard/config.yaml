@@ -1,9 +1,10 @@
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.9.1"
+version: "0.10.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
+homeassistant_api: true
 arch:
   - aarch64
 ports:

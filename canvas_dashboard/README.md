@@ -12,6 +12,8 @@ The web interface is exposed on port `4567`. Successful Canvas responses, class-
 
 ## Home Assistant Events
 
-`GET /api/status` returns current assignment counts and the latest change-event ID. `GET /api/events?after=ID` returns journal entries after a known ID for Home Assistant automations.
+Every detected Canvas change is fired on the Home Assistant event bus as `school_dashboard_activity`. Create an automation with an **Event** trigger using that event type, then access the details under `trigger.event.data` in conditions and actions. No REST sensor or YAML configuration is required.
+
+`GET /api/status` returns current assignment counts and the latest change-event ID. `GET /api/events?after=ID` remains available for external integrations.
 
 See the [project repository](https://github.com/sbalentine/canvas_dashboard) for complete setup, API, and automation examples.

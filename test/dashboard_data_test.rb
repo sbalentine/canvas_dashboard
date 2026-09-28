@@ -132,6 +132,29 @@ class DashboardDataTest < Minitest::Test
     assert_nil dashboard_status[:error]
   end
 
+  def test_refresh_publishes_events_after_journal_ids_are_assigned
+    $dashboard_data = base_data
+    changed = base_data(
+      "updated_at" => "2026-09-27T12:10:00Z",
+      "missing" => [{ "id" => 10, "course_id" => 1, "name" => "Quiz" }]
+    )
+    published = nil
+
+    with_replaced_method(self, :fetch_dashboard_data, -> { changed }) do
+      with_replaced_method(
+        self,
+        :publish_home_assistant_events,
+        ->(events) { published = deep_copy(events) }
+      ) do
+        capture_io { refresh_dashboard }
+      end
+    end
+
+    assert_equal 1, published.length
+    assert_equal 1, published.first["id"]
+    assert_equal "assignment_missing", published.first["type"]
+  end
+
   def test_refresh_failure_preserves_data_and_records_error
     $dashboard_data = base_data
 

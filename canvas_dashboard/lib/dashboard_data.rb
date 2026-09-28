@@ -204,6 +204,7 @@ def refresh_dashboard
 
     save_cache(data)
     append_dashboard_events(events)
+    publish_home_assistant_events(events)
 
     $data_mutex.synchronize do
       $dashboard_data = data
