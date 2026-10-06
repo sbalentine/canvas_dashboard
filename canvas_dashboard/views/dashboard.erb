@@ -86,6 +86,31 @@
         course_name_mappings.fetch(course_id.to_s, canvas_name)
       end
 
+      grade_overrides = load_grade_overrides
+      valid_grades = combined_grade_submissions(data, grade_overrides)
+      grades_by_course = valid_grades.group_by do |submission|
+        submission.dig("assignment", "course_id").to_s
+      end
+
+      grade_snapshot = grades_by_course.filter_map do |course_id, submissions|
+        earned = submissions.sum { |submission| submission["score"].to_f }
+        possible = submissions.sum do |submission|
+          submission.dig("assignment", "points_possible").to_f
+        end
+        calculated = percentage(earned, possible)
+        next unless calculated
+
+        course_display_name = display_course_name.call(course_id)
+
+        {
+          "course_id" => course_id,
+          "name" => course_display_name,
+          "symbol" => course_symbol(course_display_name),
+          "percentage" => calculated.round,
+          "letter" => letter_grade(calculated)
+        }
+      end.sort_by { |grade| grade["name"] }
+
       now = Time.now
       today = now.getlocal.to_date
       tomorrow = today + 1
@@ -152,6 +177,29 @@
       </div>
     </header>
 
+    <% unless grade_snapshot.empty? %>
+      <section class="grade-snapshot" aria-label="Overall grade snapshot">
+        <div class="grade-snapshot-label">Grade snapshot</div>
+
+        <div class="grade-snapshot-list">
+          <% grade_snapshot.each do |grade| %>
+            <a
+              class="grade-snapshot-item grade-<%= grade["letter"].downcase %><%= " perfect-grade" if grade["percentage"] >= 100 %>"
+              href="#grade-course-<%= h grade["course_id"] %>"
+              title="<%= h grade["name"] %>"
+            >
+              <span class="grade-snapshot-symbol" aria-hidden="true">
+                <%= grade["symbol"] %>
+              </span>
+              <span class="sr-only"><%= h grade["name"] %>:</span>
+              <strong><%= grade["percentage"] %>%</strong>
+              <span class="grade-snapshot-letter"><%= grade["letter"] %></span>
+            </a>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
+
     <% if token_days && token_days <= 7 %>
       <div class="token-expiration-alert" role="alert">
         <div>
@@ -182,14 +230,26 @@
         <h2>Up next</h2>
 
         <p>
-          <%= due_today %>
-          <%= due_today == 1 ? "assignment" : "assignments" %>
-          left today ·
-          <%= due_tomorrow %> due tomorrow ·
-          <% if missing.empty? %>
-            No missing work 🎉
+          <% if due_today.zero? && due_tomorrow.zero? && missing.empty? %>
+            All clear 🎉
           <% else %>
-            <strong><%= missing.length %> missing</strong>
+            <span class="up-next-items">
+              <% if due_today > 0 %>
+                <span>
+                  <%= due_today %>
+                  <%= due_today == 1 ? "assignment" : "assignments" %>
+                  left today
+                </span>
+              <% end %>
+
+              <% if due_tomorrow > 0 %>
+                <span><%= due_tomorrow %> due tomorrow</span>
+              <% end %>
+
+              <% unless missing.empty? %>
+                <strong><%= missing.length %> missing</strong>
+              <% end %>
+            </span>
           <% end %>
         </p>
       </div>
@@ -710,24 +770,15 @@
          ===================================================== -->
 
     <%
-      valid_grades = (data["grades"] || []).select do |submission|
-        assignment = submission["assignment"]
-
-        assignment &&
-          !submission["score"].nil? &&
-          !assignment["points_possible"].nil? &&
-          assignment["omit_from_final_grade"] != true
-      end
-
-      grades_by_course = valid_grades.group_by do |submission|
-        submission.dig(
-          "assignment",
-          "course_id"
-        )
+      grade_course_ids = (
+        (data["courses"] || []).map { |course| course["id"].to_s } +
+        grades_by_course.keys
+      ).uniq.sort_by do |course_id|
+        display_course_name.call(course_id)
       end
     %>
 
-    <section class="section">
+    <section class="section" id="grades">
 
       <div class="section-header">
 
@@ -735,15 +786,20 @@
           📊 Grades
         </h2>
 
-        <div class="section-note">
-          Calculated from graded work
+        <div class="section-header-actions">
+          <div class="section-note">
+            Official grades override Canvas estimates
+          </div>
+          <a class="section-action-link" href="/grades">Edit Grades</a>
         </div>
 
       </div>
 
-      <% grades_by_course.each do |course_id, submissions| %>
+      <% grade_course_ids.each do |course_id| %>
 
         <%
+          submissions = grades_by_course.fetch(course_id, [])
+
           earned = submissions.sum do |submission|
             submission["score"].to_f
           end
@@ -760,20 +816,12 @@
             possible
           )
 
-          grade_letter =
-            if calculated.nil?
-              nil
-            elsif calculated >= 90
-              "A"
-            elsif calculated >= 80
-              "B"
-            elsif calculated >= 70
-              "C"
-            elsif calculated >= 60
-              "D"
-            else
-              "F"
-            end
+          has_edited_grades = submissions.any? do |submission|
+            submission["_official_override"]
+          end
+
+          displayed_percentage = calculated
+          displayed_letter = letter_grade(displayed_percentage)
 
           recent = submissions.sort_by do |submission|
             submission["graded_at"] ||
@@ -785,9 +833,12 @@
           end.reverse
         %>
 
-        <section class="grade-card">
+        <section
+          class="grade-card"
+          id="grade-course-<%= h course_id %>"
+        >
 
-          <div class="grade-header<%= grade_letter ? " grade-#{grade_letter.downcase}" : "" %>">
+          <div class="grade-header<%= displayed_letter&.match?(/\A[A-F]\z/) ? " grade-#{displayed_letter.downcase}" : "" %>">
 
             <div>
 
@@ -796,31 +847,42 @@
               </h3>
 
               <div class="grade-meta">
-                <%= submissions.length %>
-                graded assignments
-                ·
-                <%= h format_number(earned) %>
-                /
-                <%= h format_number(possible) %>
-                pts
+                <% if submissions.empty? %>
+                  No graded Canvas assignments
+                <% else %>
+                  <%= has_edited_grades ? "Canvas + edited grades" : "Canvas estimate" %> ·
+                  <%= submissions.length %>
+                  graded <%= submissions.length == 1 ? "assignment" : "assignments" %>
+                  ·
+                  <%= h format_number(earned) %>
+                  /
+                  <%= h format_number(possible) %>
+                  pts
+                <% end %>
               </div>
 
             </div>
 
             <div class="grade-percent">
-              <% if calculated %>
-                <span class="grade-value"><%= calculated %>%</span>
-                <span class="grade-letter"><%= grade_letter %></span>
-              <% else %>
+              <% if displayed_percentage %>
+                <span class="grade-value"><%= h format_number(displayed_percentage) %>%</span>
+              <% end %>
+              <% if displayed_letter %>
+                <span class="grade-letter"><%= h displayed_letter %></span>
+              <% elsif displayed_percentage.nil? %>
                 —
+              <% else %>
+                <span class="grade-letter"><%= h letter_grade(displayed_percentage) %></span>
               <% end %>
             </div>
 
           </div>
 
-          <div class="recent-label">
-            RECENT GRADES
-          </div>
+          <% unless recent.empty? %>
+            <div class="recent-label">
+              RECENT CANVAS GRADES
+            </div>
+          <% end %>
 
           <div class="grade-list">
             <% recent.each do |submission| %>
@@ -837,6 +899,7 @@
                 )
 
                 url = assignment["html_url"]
+                official_override = submission["_official_override"]
 
                 grade_class =
                   if pct && pct < 70
@@ -872,6 +935,9 @@
                       submission["graded_at"] ||
                       assignment["due_at"]
                     ) %>
+                    <% if official_override %>
+                      <span class="official-grade-badge">Edited</span>
+                    <% end %>
                   </div>
 
                 </div>
@@ -887,6 +953,13 @@
                   <% if pct %>
                     <span<%= pct == 100 ? ' class="perfect-score" title="Perfect score!"' : "" %>>
                       <%= pct %>%
+                    </span>
+                  <% end %>
+
+                  <% if official_override && !submission["_custom_grade"] %>
+                    <span class="canvas-grade-original">
+                      Canvas:
+                      <%= h format_number(submission["_canvas_score"]) %>/<%= h format_number(submission["_canvas_points_possible"]) %>
                     </span>
                   <% end %>
 
@@ -940,6 +1013,9 @@
 
       <a class="class-names-link" href="/class-names">
         Edit Class Names
+      </a>
+      <a class="class-names-link" href="/grades">
+        Edit Assignment Grades
       </a>
     </footer>
 

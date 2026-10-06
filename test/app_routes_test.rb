@@ -19,11 +19,21 @@ end
 
 class AppRoutesTest < Minitest::Test
   def setup
+    FileUtils.rm_f(GRADE_OVERRIDES_FILE)
     $dashboard_data = {
       "profile" => { "short_name" => "Avery" },
-      "courses" => [],
-      "course_names" => {},
-      "grades" => [],
+      "courses" => [{ "id" => 1, "name" => "Math" }],
+      "course_names" => { "1" => "Math" },
+      "grades" => [{
+        "assignment_id" => 10,
+        "score" => 8,
+        "assignment" => {
+          "id" => 10,
+          "course_id" => 1,
+          "name" => "Quiz",
+          "points_possible" => 10
+        }
+      }],
       "missing" => [],
       "upcoming" => [],
       "todo" => [],
@@ -35,10 +45,12 @@ class AppRoutesTest < Minitest::Test
     $event_journal = { "next_id" => 1, "events" => [] }
   end
 
-  def request(path, request_class = Net::HTTP::Get)
+  def request(path, request_class = Net::HTTP::Get, fields = nil)
     uri = URI("http://127.0.0.1:#{DASHBOARD_TEST_PORT}#{path}")
     Net::HTTP.start(uri.hostname, uri.port) do |http|
-      http.request(request_class.new(uri))
+      request = request_class.new(uri)
+      request.set_form_data(fields) if fields
+      http.request(request)
     end
   end
 
@@ -47,6 +59,7 @@ class AppRoutesTest < Minitest::Test
     stylesheet = request("/dashboard.css")
     manifest = request("/manifest.json")
     class_names = request("/class-names")
+    grades = request("/grades")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
@@ -54,6 +67,79 @@ class AppRoutesTest < Minitest::Test
     assert_equal "School Dashboard", JSON.parse(manifest.body)["name"]
     assert_equal "200", class_names.code
     assert_includes class_names.body, "Class Names"
+    assert_equal "200", grades.code
+    assert_includes grades.body, "Edit Assignment Grades"
+  end
+
+  def test_grade_route_saves_and_clears_official_grades
+    saved = request(
+      "/grades",
+      Net::HTTP::Post,
+      "canvas_10_score" => "9.2",
+      "canvas_10_points" => "",
+      "new_name" => ""
+    )
+
+    assert_equal "303", saved.code
+    assert_equal 9.2, load_grade_overrides.dig("canvas", "10", "score")
+
+    editor = request("/grades")
+    assert_includes editor.body, "assignment-grade-row is-edited"
+    assert_includes editor.body, ">Edited<"
+
+    cleared = request(
+      "/grades",
+      Net::HTTP::Post,
+      "canvas_10_score" => "",
+      "canvas_10_points" => "",
+      "new_name" => ""
+    )
+
+    assert_equal "303", cleared.code
+    assert_equal(
+      { "canvas" => {}, "custom" => {} },
+      load_grade_overrides
+    )
+  end
+
+  def test_grade_route_rejects_invalid_percentages
+    response = request(
+      "/grades",
+      Net::HTTP::Post,
+      "canvas_10_score" => "invalid",
+      "canvas_10_points" => "",
+      "new_name" => ""
+    )
+
+    assert_equal "422", response.code
+    assert_includes response.body, "valid number"
+  end
+
+  def test_grade_route_adds_infinite_campus_only_assignment
+    response = request(
+      "/grades",
+      Net::HTTP::Post,
+      "canvas_10_score" => "",
+      "canvas_10_points" => "",
+      "new_0_name" => "Unit Test",
+      "new_0_course_id" => "1",
+      "new_0_score" => "18",
+      "new_0_points" => "20",
+      "new_0_date" => "2026-10-06",
+      "new_1_name" => "Lab Report",
+      "new_1_course_id" => "1",
+      "new_1_score" => "24",
+      "new_1_points" => "25",
+      "new_1_date" => "2026-10-05"
+    )
+
+    assert_equal "303", response.code
+
+    grades = load_grade_overrides.fetch("custom").values.sort_by { |grade| grade["name"] }
+    assert_equal 2, grades.length
+    assert_equal ["Lab Report", "Unit Test"], grades.map { |grade| grade["name"] }
+    assert_equal [24.0, 18.0], grades.map { |grade| grade["score"] }
+    assert_equal [25.0, 20.0], grades.map { |grade| grade["points_possible"] }
   end
 
   def test_status_route_exposes_home_assistant_contract

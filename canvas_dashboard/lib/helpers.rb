@@ -1,5 +1,6 @@
 require "time"
 require "cgi"
+require "json"
 
 # ============================================================
 # HTML / Number Formatting
@@ -20,6 +21,95 @@ def format_number(number)
   return "-" if number.nil?
 
   number.to_f % 1 == 0 ? number.to_i : number.round(1)
+end
+
+def letter_grade(percentage)
+  return nil if percentage.nil?
+
+  case percentage
+  when 90.. then "A"
+  when 80...90 then "B"
+  when 70...80 then "C"
+  when 60...70 then "D"
+  else "F"
+  end
+end
+
+def course_symbol(name)
+  case name.to_s.downcase
+  when /science|biology|chemistry|physics/
+    "🧪"
+  when /math|algebra|geometry|calculus/
+    "➗"
+  when /language arts|english|reading|literature|\bela\b/
+    "📚"
+  when /social studies|history|geography|civics|\bss\b/
+    "🌎"
+  when /drama|theater|theatre/
+    "🎭"
+  when /art/
+    "🎨"
+  when /music|band|choir/
+    "🎵"
+  when /physical education|\bpe\b/
+    "🏃"
+  else
+    "🎓"
+  end
+end
+
+def combined_grade_submissions(data, grade_overrides)
+  canvas_grades = (data["grades"] || []).select do |submission|
+    assignment = submission["assignment"]
+
+    assignment &&
+      !submission["score"].nil? &&
+      !assignment["points_possible"].nil? &&
+      assignment["omit_from_final_grade"] != true
+  end
+
+  combined = canvas_grades.map do |submission|
+    assignment_id = (
+      submission["assignment_id"] ||
+      submission.dig("assignment", "id")
+    ).to_s
+    override = grade_overrides.fetch("canvas", {})[assignment_id]
+
+    next submission unless override
+
+    adjusted = JSON.parse(JSON.generate(submission))
+    adjusted["_official_override"] = true
+    adjusted["_canvas_score"] = submission["score"]
+    adjusted["_canvas_points_possible"] =
+      submission.dig("assignment", "points_possible")
+    adjusted["score"] = override["score"] unless override["score"].nil?
+
+    unless override["points_possible"].nil?
+      adjusted["assignment"]["points_possible"] =
+        override["points_possible"]
+    end
+
+    adjusted
+  end
+
+  grade_overrides.fetch("custom", {}).each do |grade_id, grade|
+    combined << {
+      "_official_override" => true,
+      "_custom_grade" => true,
+      "assignment_id" => "custom-#{grade_id}",
+      "score" => grade["score"],
+      "graded_at" => "#{grade["graded_at"]}T12:00:00",
+      "assignment" => {
+        "id" => "custom-#{grade_id}",
+        "course_id" => grade["course_id"],
+        "name" => grade["name"],
+        "points_possible" => grade["points_possible"],
+        "omit_from_final_grade" => false
+      }
+    }
+  end
+
+  combined
 end
 
 # ============================================================

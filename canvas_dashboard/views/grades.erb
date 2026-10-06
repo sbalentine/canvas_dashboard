@@ -1,0 +1,353 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Edit Assignment Grades</title>
+</head>
+
+<body>
+  <main class="container settings-page grade-settings-page">
+    <header class="settings-header">
+      <div>
+        <h1>Edit Assignment Grades</h1>
+        <div class="subtitle">
+          Adjust stale Canvas values or add grades that only appear in Infinite Campus.
+        </div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <form class="grade-settings" method="post" action="/grades">
+      <section class="card">
+        <h2>Canvas Assignments</h2>
+        <p class="settings-intro">
+          Leave both fields blank to use Canvas. Enter only the value that needs correcting.
+        </p>
+
+        <div class="assignment-grade-list">
+          <%
+            canvas_grades = (data["grades"] || []).select do |submission|
+              submission["assignment"] && (
+                submission["assignment_id"] ||
+                submission.dig("assignment", "id")
+              )
+            end.sort_by do |submission|
+              [
+                parse_canvas_time(
+                  submission["graded_at"] ||
+                  submission.dig("assignment", "due_at")
+                ) || Time.at(0),
+                submission.dig("assignment", "name").to_s
+              ]
+            end.reverse
+          %>
+
+          <% canvas_grades.each do |submission| %>
+            <%
+              assignment = submission["assignment"]
+              assignment_id = (
+                submission["assignment_id"] ||
+                assignment["id"]
+              ).to_s
+              override = overrides.fetch("canvas", {}).fetch(assignment_id, {})
+              course_id = assignment["course_id"].to_s
+            %>
+
+            <div class="assignment-grade-row<%= " is-edited" unless override.empty? %>">
+              <div class="assignment-grade-name">
+                <div class="assignment-grade-title">
+                  <strong><%= h assignment["name"] %></strong>
+                  <% unless override.empty? %>
+                    <span class="edited-assignment-label">Edited</span>
+                  <% end %>
+                </div>
+                <span>
+                  <%= h mappings.fetch(course_id, course_name(data, course_id)) %>
+                  · Canvas: <%= h format_number(submission["score"]) %>/<%= h format_number(assignment["points_possible"]) %>
+                </span>
+              </div>
+
+              <label>
+                <span>Earned</span>
+                <input
+                  type="number"
+                  name="canvas_<%= h assignment_id %>_score"
+                  value="<%= h override["score"] %>"
+                  min="0"
+                  max="99999"
+                  step="0.01"
+                  inputmode="decimal"
+                  placeholder="<%= h format_number(submission["score"]) %>"
+                >
+              </label>
+
+              <label>
+                <span>Possible</span>
+                <input
+                  type="number"
+                  name="canvas_<%= h assignment_id %>_points"
+                  value="<%= h override["points_possible"] %>"
+                  min="0"
+                  max="99999"
+                  step="0.01"
+                  inputmode="decimal"
+                  placeholder="<%= h format_number(assignment["points_possible"]) %>"
+                >
+              </label>
+            </div>
+          <% end %>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Infinite Campus-only Assignments</h2>
+        <p class="settings-intro">
+          Clear an assignment name to remove that added grade.
+        </p>
+
+        <% overrides.fetch("custom", {}).each do |grade_id, grade| %>
+          <div class="custom-grade-row">
+            <label class="custom-grade-name">
+              <span>Assignment</span>
+              <input
+                type="text"
+                name="custom_<%= h grade_id %>_name"
+                value="<%= h grade["name"] %>"
+                maxlength="255"
+              >
+            </label>
+
+            <label>
+              <span>Course</span>
+              <select name="custom_<%= h grade_id %>_course_id">
+                <% (data["courses"] || []).each do |course| %>
+                  <option
+                    value="<%= h course["id"] %>"
+                    <%= "selected" if course["id"].to_s == grade["course_id"].to_s %>
+                  >
+                    <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
+                  </option>
+                <% end %>
+              </select>
+            </label>
+
+            <label>
+              <span>Earned</span>
+              <input
+                type="number"
+                name="custom_<%= h grade_id %>_score"
+                value="<%= h grade["score"] %>"
+                min="0"
+                max="99999"
+                step="0.01"
+                inputmode="decimal"
+              >
+            </label>
+
+            <label>
+              <span>Possible</span>
+              <input
+                type="number"
+                name="custom_<%= h grade_id %>_points"
+                value="<%= h grade["points_possible"] %>"
+                min="0"
+                max="99999"
+                step="0.01"
+                inputmode="decimal"
+              >
+            </label>
+
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                name="custom_<%= h grade_id %>_date"
+                value="<%= h grade["graded_at"] %>"
+              >
+            </label>
+          </div>
+        <% end %>
+
+        <div id="new-custom-grades">
+          <div class="custom-grade-row new-custom-grade">
+            <label class="custom-grade-name">
+              <span>New assignment</span>
+              <input
+                type="text"
+                name="new_0_name"
+                maxlength="255"
+                placeholder="Assignment name"
+              >
+            </label>
+
+            <label>
+              <span>Course</span>
+              <select name="new_0_course_id">
+                <% (data["courses"] || []).each do |course| %>
+                  <option value="<%= h course["id"] %>">
+                    <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
+                  </option>
+                <% end %>
+              </select>
+            </label>
+
+            <label>
+              <span>Earned</span>
+              <input
+                type="number"
+                name="new_0_score"
+                min="0"
+                max="99999"
+                step="0.01"
+                inputmode="decimal"
+              >
+            </label>
+
+            <label>
+              <span>Possible</span>
+              <input
+                type="number"
+                name="new_0_points"
+                min="0"
+                max="99999"
+                step="0.01"
+                inputmode="decimal"
+              >
+            </label>
+
+            <label>
+              <span>Date</span>
+              <input type="date" name="new_0_date" value="<%= Date.today.iso8601 %>">
+            </label>
+
+            <button
+              class="remove-new-grade"
+              type="button"
+              aria-label="Remove new assignment"
+              title="Remove"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <button class="add-grade-row" id="add-grade-row" type="button">
+          + Add another assignment
+        </button>
+
+        <template id="new-grade-template">
+          <div class="custom-grade-row new-custom-grade">
+            <label class="custom-grade-name">
+              <span>New assignment</span>
+              <input
+                type="text"
+                name="new___INDEX___name"
+                maxlength="255"
+                placeholder="Assignment name"
+              >
+            </label>
+
+            <label>
+              <span>Course</span>
+              <select name="new___INDEX___course_id">
+                <% (data["courses"] || []).each do |course| %>
+                  <option value="<%= h course["id"] %>">
+                    <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
+                  </option>
+                <% end %>
+              </select>
+            </label>
+
+            <label>
+              <span>Earned</span>
+              <input
+                type="number"
+                name="new___INDEX___score"
+                min="0"
+                max="99999"
+                step="0.01"
+                inputmode="decimal"
+              >
+            </label>
+
+            <label>
+              <span>Possible</span>
+              <input
+                type="number"
+                name="new___INDEX___points"
+                min="0"
+                max="99999"
+                step="0.01"
+                inputmode="decimal"
+              >
+            </label>
+
+            <label>
+              <span>Date</span>
+              <input
+                type="date"
+                name="new___INDEX___date"
+                value="<%= Date.today.iso8601 %>"
+              >
+            </label>
+
+            <button
+              class="remove-new-grade"
+              type="button"
+              aria-label="Remove new assignment"
+              title="Remove"
+            >
+              ×
+            </button>
+          </div>
+        </template>
+      </section>
+
+      <p class="settings-help">
+        Edited values are stored only in this dashboard and are not sent to Canvas or
+        Infinite Campus.
+      </p>
+
+      <div class="settings-actions">
+        <a href="/">Cancel</a>
+        <button type="submit">Save Assignment Grades</button>
+      </div>
+    </form>
+  </main>
+
+  <script>
+    const newGrades = document.getElementById("new-custom-grades");
+    const gradeTemplate = document.getElementById("new-grade-template");
+    let nextGradeIndex = 1;
+
+    document.getElementById("add-grade-row").addEventListener("click", () => {
+      const html = gradeTemplate.innerHTML.replaceAll(
+        "__INDEX__",
+        String(nextGradeIndex)
+      );
+
+      newGrades.insertAdjacentHTML("beforeend", html);
+      nextGradeIndex += 1;
+
+      newGrades.lastElementChild.querySelector('input[type="text"]').focus();
+    });
+
+    newGrades.addEventListener("click", (event) => {
+      const removeButton = event.target.closest(".remove-new-grade");
+      if (!removeButton) return;
+
+      removeButton.closest(".new-custom-grade").remove();
+    });
+  </script>
+</body>
+</html>

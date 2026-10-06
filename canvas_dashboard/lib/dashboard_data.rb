@@ -200,6 +200,7 @@ def refresh_dashboard
   $refresh_mutex.synchronize do
     previous_data = dashboard_data
     data = fetch_dashboard_data
+    removed_grade_overrides = reconcile_canvas_grade_overrides(data)
     events = detect_dashboard_events(previous_data, data)
 
     save_cache(data)
@@ -220,6 +221,13 @@ def refresh_dashboard
       "#{$last_successful_update}; " \
       "#{events.length} new event(s)"
     )
+
+    unless removed_grade_overrides.empty?
+      puts(
+        "Removed #{removed_grade_overrides.length} grade override(s) " \
+        "updated by Canvas."
+      )
+    end
   end
 
 rescue => e

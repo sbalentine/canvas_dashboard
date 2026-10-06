@@ -1,12 +1,14 @@
 require "webrick"
 require "erb"
 require "json"
+require "securerandom"
 
 APP_ROOT = File.expand_path(__dir__)
 
 require_relative "lib/canvas"
 require_relative "lib/helpers"
 require_relative "lib/course_name_mappings"
+require_relative "lib/grade_overrides"
 require_relative "lib/event_journal"
 require_relative "lib/home_assistant_events"
 require_relative "lib/dashboard_data"
@@ -369,6 +371,162 @@ rescue => e
   response.status = 500
   response["Content-Type"] = "text/plain; charset=utf-8"
   response.body = "Unable to load class name settings."
+end
+
+# ============================================================
+# Official Grade Settings
+# ============================================================
+
+def grade_number(value, field_name)
+  number = Float(value)
+
+  unless number.finite? && number.between?(0, 99_999)
+    raise ArgumentError, "#{field_name} must be between 0 and 99,999"
+  end
+
+  number.round(2)
+rescue ArgumentError, TypeError
+  raise ArgumentError, "#{field_name} must be a valid number"
+end
+
+def grade_override_fields(request, data, existing)
+  canvas = {}
+
+  (data["grades"] || []).each do |submission|
+    assignment_id =
+      submission["assignment_id"] ||
+      submission.dig("assignment", "id")
+
+    next unless assignment_id
+
+    score_value =
+      request.query["canvas_#{assignment_id}_score"].to_s.strip
+    points_value =
+      request.query["canvas_#{assignment_id}_points"].to_s.strip
+
+    next if score_value.empty? && points_value.empty?
+
+    canvas[assignment_id.to_s] = {
+      "score" => score_value.empty? ? nil : grade_number(score_value, "Earned points"),
+      "points_possible" => points_value.empty? ? nil : grade_number(points_value, "Possible points"),
+      "canvas_score" => submission["score"],
+      "canvas_points_possible" =>
+        submission.dig("assignment", "points_possible"),
+      "canvas_graded_at" => submission["graded_at"],
+      "updated_at" => Time.now.iso8601
+    }
+  end
+
+  valid_course_ids = (data["courses"] || []).map { |course| course["id"].to_s }
+  custom = {}
+
+  existing.fetch("custom", {}).each_key do |grade_id|
+    name = request.query["custom_#{grade_id}_name"].to_s.strip
+    next if name.empty?
+
+    custom[grade_id] = custom_grade_fields(
+      request,
+      "custom_#{grade_id}",
+      valid_course_ids,
+      name
+    )
+  end
+
+  new_grade_indices = request.query.keys.filter_map do |key|
+    key[/\Anew_(\d+)_name\z/, 1]
+  end.uniq.sort_by(&:to_i)
+
+  new_grade_indices.each do |index|
+    prefix = "new_#{index}"
+    name = request.query["#{prefix}_name"].to_s.strip
+    next if name.empty?
+
+    custom[SecureRandom.uuid] = custom_grade_fields(
+      request,
+      prefix,
+      valid_course_ids,
+      name
+    )
+  end
+
+  { "canvas" => canvas, "custom" => custom }
+end
+
+def custom_grade_fields(request, prefix, valid_course_ids, name)
+  raise ArgumentError, "Assignment names must be 255 characters or fewer" if name.length > 255
+
+  course_id = request.query["#{prefix}_course_id"].to_s
+  raise ArgumentError, "Select a valid course" unless valid_course_ids.include?(course_id)
+
+  score_value = request.query["#{prefix}_score"].to_s.strip
+  points_value = request.query["#{prefix}_points"].to_s.strip
+  grade_date = request.query["#{prefix}_date"].to_s
+
+  raise ArgumentError, "Earned points are required" if score_value.empty?
+  raise ArgumentError, "Possible points are required" if points_value.empty?
+
+  unless grade_date.match?(/\A\d{4}-\d{2}-\d{2}\z/)
+    raise ArgumentError, "A valid grade date is required"
+  end
+
+  Date.iso8601(grade_date)
+
+  {
+    "course_id" => course_id,
+    "name" => name,
+    "score" => grade_number(score_value, "Earned points"),
+    "points_possible" => grade_number(points_value, "Possible points"),
+    "graded_at" => grade_date,
+    "updated_at" => Time.now.iso8601
+  }
+rescue Date::Error
+  raise ArgumentError, "A valid grade date is required"
+end
+
+server.mount_proc "/grades" do |request, response|
+  data = dashboard_data || {}
+
+  if request.request_method == "POST"
+    begin
+      existing = load_grade_overrides
+      overrides = grade_override_fields(request, data, existing)
+      save_grade_overrides(overrides)
+
+      response.status = 303
+      response["Location"] = "/"
+      response.body = ""
+    rescue ArgumentError => e
+      response.status = 422
+      response["Content-Type"] = "text/plain; charset=utf-8"
+      response.body = e.message
+    end
+
+    next
+  end
+
+  unless request.request_method == "GET"
+    response.status = 405
+    response["Allow"] = "GET, POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  overrides = load_grade_overrides
+  mappings = load_course_name_mappings
+  template = ERB.new(
+    File.read(File.join(APP_ROOT, "views", "grades.erb"))
+  )
+
+  response.status = 200
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Grade settings error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load grade settings."
 end
 
 # ============================================================

@@ -10,6 +10,7 @@ TEST_TMP_DIR = Dir.mktmpdir("canvas-dashboard-test")
 ENV["CACHE_FILE"] = File.join(TEST_TMP_DIR, "canvas_cache.json")
 ENV["EVENT_JOURNAL_FILE"] = File.join(TEST_TMP_DIR, "event_journal.json")
 ENV["COURSE_NAME_MAPPINGS_FILE"] = File.join(TEST_TMP_DIR, "course_names.json")
+ENV["GRADE_OVERRIDES_FILE"] = File.join(TEST_TMP_DIR, "grade_overrides.json")
 
 require_relative "../canvas_dashboard/app"
 

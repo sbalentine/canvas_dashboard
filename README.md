@@ -8,7 +8,7 @@ The dashboard provides a simple view of the school information that matters most
 * ✅ Canvas to-do list with completion controls
 * 📅 Assignments due in the next 7 days
 * ✅ Submission status
-* 📊 Grades and recent scores
+* 📊 Editable assignment grades, calculated course estimates, and recent scores
 * 🔑 Canvas API token expiration
 * 💾 Cached data when Canvas is temporarily unavailable
 * 🏠 Home Assistant status and change-event API
@@ -83,6 +83,14 @@ Calculates a current grade for each course from graded assignments returned by t
 The dashboard also shows recent individual assignment grades.
 
 > **Note:** These percentages are calculated from the assignments available through the API and may not exactly match the official Canvas course grade, particularly when a teacher uses weighted assignment groups, grading periods, dropped assignments, or other gradebook rules.
+
+Use **Edit Assignment Grades** to correct stale Canvas scores or add assignments that only appear in Infinite Campus. Existing Canvas assignments accept optional earned-point and possible-point overrides; leaving both blank uses Canvas values. Infinite Campus-only assignments include a course, name, earned points, possible points, and date. Course percentages are recalculated from the combined assignment list.
+
+Edits are stored in `/data/grade_overrides.json` for the Home Assistant add-on or `tmp/grade_overrides.json` locally. Values stay local to the dashboard and are not sent to Canvas or Infinite Campus.
+
+When an overridden Canvas assignment receives a changed score, possible-points value, or grading timestamp from Canvas, the dashboard automatically removes that override on the next successful refresh. Infinite Campus-only assignments are retained because they have no corresponding Canvas assignment to update.
+
+Infinite Campus offers stable automated grade access through district-managed OneRoster exports and APIs, not ordinary parent or student portal credentials. Unofficial portal clients exist but depend on reverse-engineered endpoints and stored login credentials, so the dashboard uses explicit local grades rather than an unreliable credential-based sync.
 
 ### 💾 Local Cache
 

@@ -8,6 +8,14 @@ class HelpersTest < Minitest::Test
     assert_equal "-", format_number(nil)
     assert_equal 5, format_number(5.0)
     assert_equal 5.3, format_number(5.34)
+    assert_equal "A", letter_grade(90)
+    assert_equal "B", letter_grade(89.9)
+    assert_equal "F", letter_grade(0)
+    assert_nil letter_grade(nil)
+    assert_equal "🧪", course_symbol("6th Grade Science")
+    assert_equal "➗", course_symbol("Math 6A")
+    assert_equal "🎭", course_symbol("Explore Drama")
+    assert_equal "🌎", course_symbol("S1 G6 SS")
   end
 
   def test_course_and_assignment_values_support_canvas_shapes
