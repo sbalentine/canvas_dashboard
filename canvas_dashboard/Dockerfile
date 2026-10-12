@@ -2,7 +2,11 @@ FROM ghcr.io/home-assistant/aarch64-base:3.22
 
 RUN apk add --no-cache \
     ruby \
-    ruby-webrick
+    ruby-webrick && \
+    gem install --no-document \
+      base64:0.3.0 \
+      net-smtp:0.5.2 \
+      rubyzip:3.7.0
 
 WORKDIR /app
 

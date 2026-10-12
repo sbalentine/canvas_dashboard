@@ -16,7 +16,9 @@ def options
     {
       "canvas_token" => ENV["CANVAS_TOKEN"],
       "token_expires" => ENV["TOKEN_EXPIRES"],
-      "canvas_url" => ENV["CANVAS_URL"]
+      "canvas_url" => ENV["CANVAS_URL"],
+      "gmail_sender" => ENV["GMAIL_SENDER"],
+      "gmail_app_password" => ENV["GMAIL_APP_PASSWORD"]
     }
   end
 end

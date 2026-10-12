@@ -22,6 +22,7 @@ class AppRoutesTest < Minitest::Test
     FileUtils.rm_f(GRADE_OVERRIDES_FILE)
     FileUtils.rm_f(MANUAL_COURSEWORK_FILE)
     FileUtils.rm_f(HIDDEN_COURSES_FILE)
+    FileUtils.rm_f(BACKUP_SETTINGS_FILE)
     $dashboard_data = {
       "profile" => { "short_name" => "Avery" },
       "courses" => [{ "id" => 1, "name" => "Math" }],
@@ -62,6 +63,7 @@ class AppRoutesTest < Minitest::Test
     manifest = request("/manifest.json")
     class_names = request("/class-names")
     grades = request("/grades")
+    backups = request("/backups")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
@@ -71,6 +73,42 @@ class AppRoutesTest < Minitest::Test
     assert_includes class_names.body, "Class Names"
     assert_equal "200", grades.code
     assert_includes grades.body, "Edit Assignment Grades"
+    assert_equal "200", backups.code
+    assert_includes backups.body, "Email Backups"
+  end
+
+  def test_backup_route_saves_recipient_and_daily_preference
+    response = request(
+      "/backups",
+      Net::HTTP::Post,
+      "action" => "save",
+      "recipient_email" => "parent@example.com",
+      "daily_enabled" => "true"
+    )
+
+    assert_equal "303", response.code
+    assert_equal "/backups?saved=1", URI(response["Location"]).request_uri
+    assert_equal(
+      {
+        "recipient_email" => "parent@example.com",
+        "daily_enabled" => true,
+        "last_daily_sent_on" => nil
+      },
+      load_backup_settings
+    )
+  end
+
+  def test_backup_route_reports_missing_gmail_configuration
+    response = request(
+      "/backups",
+      Net::HTTP::Post,
+      "action" => "send",
+      "recipient_email" => "parent@example.com"
+    )
+
+    assert_equal "422", response.code
+    assert_includes response.body, "Gmail is not configured"
+    assert_includes response.body, "Configure the Gmail sender and app password"
   end
 
   def test_grade_snapshot_is_sorted_highest_to_lowest

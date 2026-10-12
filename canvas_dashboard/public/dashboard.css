@@ -18,6 +18,7 @@
 
   --success: #027a48;
   --success-bg: #ecfdf3;
+  --success-border: #abefc6;
 
   --info: #175cd3;
   --info-bg: #eff8ff;
@@ -1538,6 +1539,94 @@ a:hover {
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
+}
+
+/* ==========================================================
+   Email Backup Settings
+   ========================================================== */
+
+.backup-settings-form {
+  display: grid;
+  gap: 20px;
+}
+
+.backup-settings-form > label > span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.backup-settings-form input[type="email"] {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.backup-settings-form .backup-daily-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.backup-daily-field input {
+  width: 19px;
+  height: 19px;
+  margin-top: 1px;
+}
+
+.backup-daily-field span,
+.backup-daily-field strong,
+.backup-daily-field small {
+  display: block;
+}
+
+.backup-daily-field small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.backup-message {
+  margin-bottom: 16px;
+  padding: 13px 15px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.backup-message strong {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.backup-message.success {
+  border-color: var(--success-border);
+  background: var(--success-bg);
+  color: var(--success);
+}
+
+.backup-message.warning,
+.backup-message.error {
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.settings-actions .backup-now-button {
+  background: var(--success);
+}
+
+.settings-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ==========================================================

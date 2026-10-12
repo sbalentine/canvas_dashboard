@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Email Backups</title>
+</head>
+
+<body>
+  <main class="container settings-page backup-settings-page">
+    <header class="settings-header">
+      <div>
+        <h1>Email Backups</h1>
+        <div class="subtitle">
+          Email a ZIP of Canvas data and dashboard edits without retaining a backup file.
+        </div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <% if backup_error %>
+      <div class="backup-message error" role="alert">
+        <strong>Backup not sent.</strong>
+        <%= h backup_error %>
+      </div>
+    <% elsif request.query["sent"] == "1" %>
+      <div class="backup-message success" role="status">
+        <strong>Backup sent.</strong>
+        Check the configured email inbox.
+      </div>
+    <% elsif request.query["saved"] == "1" %>
+      <div class="backup-message success" role="status">
+        <strong>Backup settings saved.</strong>
+      </div>
+    <% end %>
+
+    <% unless gmail_configured %>
+      <div class="backup-message warning" role="status">
+        <strong>Gmail is not configured.</strong>
+        Add the Gmail sender and app password in the Home Assistant add-on settings,
+        then restart the add-on.
+      </div>
+    <% end %>
+
+    <form class="card backup-settings-form" method="post" action="/backups">
+      <label>
+        <span>Send backups to</span>
+        <input
+          type="email"
+          name="recipient_email"
+          value="<%= h settings["recipient_email"] %>"
+          maxlength="254"
+          autocomplete="email"
+          placeholder="you@example.com"
+        >
+      </label>
+
+      <label class="backup-daily-field">
+        <input
+          type="checkbox"
+          name="daily_enabled"
+          value="true"
+          <%= "checked" if settings["daily_enabled"] %>
+        >
+        <span>
+          <strong>Send every day at 3:00 AM</strong>
+          <small>Uses the Raspberry Pi's local time.</small>
+        </span>
+      </label>
+
+      <p class="settings-help">
+        The ZIP includes the Canvas cache, manual coursework, grade edits, class names,
+        hidden classes, activity history, and these backup preferences. Canvas and Gmail
+        credentials are never included.
+      </p>
+
+      <div class="settings-actions backup-actions">
+        <a href="/">Cancel</a>
+        <button type="submit" name="action" value="save">
+          Save Settings
+        </button>
+        <button
+          class="backup-now-button"
+          type="submit"
+          name="action"
+          value="send"
+          <%= "disabled" unless gmail_configured %>
+        >
+          Email Backup Now
+        </button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

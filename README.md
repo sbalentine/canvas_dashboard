@@ -107,6 +107,23 @@ Successful Canvas responses are cached locally.
 
 If Canvas is temporarily unavailable, the dashboard can continue displaying the last successfully retrieved data instead of becoming unusable.
 
+### ✉️ Email Backups
+
+The **Email Backups** page can send an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Enter the destination email address, optionally enable delivery every day at 3:00 AM local time, or use **Email Backup Now**.
+
+Each message has the subject `School Dashboard Backup for {Current Date}` and contains only the ZIP attachment. The archive is discarded after Gmail accepts the message; no backup ZIP is retained on the system.
+
+The archive includes the Canvas cache, manual coursework, grade overrides and custom grades, class-name mappings, hidden classes, event history, backup recipient, a manifest, and checksums. It never includes `/data/options.json`, the Canvas token, or Gmail credentials.
+
+To enable email delivery:
+
+1. Enable 2-Step Verification on the sending Google account.
+2. Create a Google app password for the dashboard.
+3. In the Home Assistant School Dashboard app configuration, set `gmail_sender` to that Google account's email address and `gmail_app_password` to the generated app password.
+4. Restart the app, open **Email Backups**, and configure the destination email address.
+
+The Gmail fields are optional. The dashboard continues working normally when they are blank, but backup email delivery remains disabled.
+
 ### 🔄 Automatic Refresh
 
 Canvas data is refreshed automatically every 10 minutes.
@@ -373,7 +390,7 @@ Example:
 ```yaml
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.9.0"
+version: "0.14.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
@@ -394,14 +411,18 @@ options:
   canvas_url: ""
   canvas_token: ""
   token_expires: ""
+  gmail_sender: ""
+  gmail_app_password: ""
 
 schema:
   canvas_url: str
   canvas_token: password
   token_expires: str
+  gmail_sender: str
+  gmail_app_password: password
 ```
 
-Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration.
+Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The Gmail sender and app password are optional and only required for email backups.
 
 The token is provided to the application through Home Assistant's `/data/options.json` and does **not** need to be stored in the Git repository.
 
@@ -449,7 +470,9 @@ Expected options:
 {
   "canvas_url": "https://your-school.instructure.com",
   "canvas_token": "...",
-  "token_expires": "YYYY-MM-DD"
+  "token_expires": "YYYY-MM-DD",
+  "gmail_sender": "sender@gmail.com",
+  "gmail_app_password": "..."
 }
 ```
 
@@ -461,6 +484,8 @@ Local development uses environment variables:
 CANVAS_URL
 CANVAS_TOKEN
 TOKEN_EXPIRES
+GMAIL_SENDER
+GMAIL_APP_PASSWORD
 ```
 
 `run-local.sh` loads these values from `.env`.
@@ -491,7 +516,7 @@ The Canvas instance URL (for example `https://your-school.instructure.com`) is c
 
 # Security
 
-The Canvas access token provides access to information available to the associated Canvas account.
+The Canvas access token provides access to information available to the associated Canvas account. The Gmail app password permits the dashboard to send mail through the configured Google account.
 
 Treat it like a password.
 
@@ -503,6 +528,7 @@ Do not:
 * Store it directly in source code
 * Publish `/data/options.json`
 * Publish your local `.env`
+* Include the Canvas token or Gmail app password in a backup archive
 
 The repository's `.gitignore` excludes common secret and runtime files, but always review changes before pushing:
 

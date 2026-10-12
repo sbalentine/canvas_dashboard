@@ -1,6 +1,6 @@
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.13.0"
+version: "0.14.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
@@ -17,7 +17,11 @@ options:
   canvas_url: ""
   canvas_token: ""
   token_expires: ""
+  gmail_sender: ""
+  gmail_app_password: ""
 schema:
   canvas_url: str
   canvas_token: password
   token_expires: str
+  gmail_sender: str
+  gmail_app_password: password

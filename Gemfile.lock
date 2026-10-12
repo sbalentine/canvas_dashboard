@@ -1,11 +1,18 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    base64 (0.3.0)
     drb (2.2.3)
     minitest (6.0.6)
       drb (~> 2.0)
       prism (~> 1.5)
+    net-protocol (0.4.0)
+      timeout
+    net-smtp (0.5.2)
+      net-protocol
     prism (1.9.0)
+    rubyzip (3.7.0)
+    timeout (0.6.1)
     webrick (1.9.2)
 
 PLATFORMS
@@ -13,13 +20,21 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  base64 (~> 0.3)
   minitest (~> 6.0)
+  net-smtp (~> 0.5)
+  rubyzip (~> 3.2)
   webrick (~> 1.9)
 
 CHECKSUMS
+  base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
+  net-protocol (0.4.0) sha256=f9f90c8c6f64794a45160bf422177a336db12809de3beeeaa26b88fcd2e8c853
+  net-smtp (0.5.2) sha256=35103cc04d6b2d94632f9928ede07483c24b70b9c0db1f231fea43909b678f3c
   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
+  rubyzip (3.7.0) sha256=65c19294da75297a939006f3516deacc33185fbd721ff1954f7a231db6d3e121
+  timeout (0.6.1) sha256=78f57368a7e7bbadec56971f78a3f5ecbcfb59b7fcbb0a3ed6ddc08a5094accb
   webrick (1.9.2) sha256=beb4a15fc474defed24a3bda4ffd88a490d517c9e4e6118c3edce59e45864131
 
 BUNDLED WITH
