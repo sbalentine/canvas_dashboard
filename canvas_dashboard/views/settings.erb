@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Settings</title>
+</head>
+
+<body>
+  <main class="container settings-page settings-hub-page">
+    <header class="settings-header">
+      <div>
+        <h1>Settings</h1>
+        <div class="subtitle">Manage dashboard data, display, and notifications.</div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <% if request.query["saved"] == "calendar" %>
+      <div class="backup-message success" role="status">
+        <strong>Calendar settings saved.</strong>
+      </div>
+    <% elsif calendar_error %>
+      <div class="backup-message error" role="alert">
+        <strong>Calendar settings not saved.</strong>
+        <%= h calendar_error %>
+      </div>
+    <% end %>
+
+    <section class="card calendar-settings-card">
+      <h2>District Calendar</h2>
+      <p class="settings-intro">
+        Add a private iCalendar (ICS) feed to show upcoming district dates,
+        holidays, and schedule changes on the dashboard.
+      </p>
+
+      <form method="post" action="/settings">
+        <label>
+          <span>Calendar feed URL</span>
+          <input
+            type="url"
+            name="calendar_feed_url"
+            value="<%= h calendar_settings["feed_url"] %>"
+            placeholder="https://example.org/calendar.ics"
+            autocomplete="off"
+          >
+          <small>
+            Stored only in this app's local data. Clear the field to disable district dates.
+          </small>
+        </label>
+
+        <label class="calendar-keywords-field">
+          <span>Hide events containing these keywords</span>
+          <textarea
+            name="calendar_excluded_keywords"
+            rows="4"
+            placeholder=""
+          ><%= h calendar_settings["excluded_keywords"].join("\n") %></textarea>
+          <small>
+            Enter one keyword or phrase per line. Matching is not case-sensitive
+            and checks the event title, description, and location.
+          </small>
+        </label>
+
+        <div class="settings-actions">
+          <button type="submit">Save Calendar</button>
+        </div>
+      </form>
+    </section>
+
+    <nav class="settings-grid" aria-label="Dashboard settings">
+      <a class="card settings-link-card" href="/class-names">
+        <strong>Classes</strong>
+        <span>Edit class names and hide inactive classes.</span>
+      </a>
+      <a class="card settings-link-card" href="/grades">
+        <strong>Assignment Grades</strong>
+        <span>Correct Canvas scores and add external grades.</span>
+      </a>
+      <a class="card settings-link-card" href="/coursework">
+        <strong>Manual Coursework</strong>
+        <span>Add classes and assignments that are not in Canvas.</span>
+      </a>
+      <a class="card settings-link-card" href="/scheduled-emails">
+        <strong>Scheduled Emails</strong>
+        <span>Configure daily summaries and data backups.</span>
+      </a>
+    </nav>
+  </main>
+</body>
+</html>

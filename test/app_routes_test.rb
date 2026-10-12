@@ -23,6 +23,8 @@ class AppRoutesTest < Minitest::Test
     FileUtils.rm_f(MANUAL_COURSEWORK_FILE)
     FileUtils.rm_f(HIDDEN_COURSES_FILE)
     FileUtils.rm_f(BACKUP_SETTINGS_FILE)
+    FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
+    $school_calendar_cache = nil
     $dashboard_data = {
       "profile" => { "short_name" => "Avery" },
       "courses" => [{ "id" => 1, "name" => "Math" }],
@@ -64,6 +66,8 @@ class AppRoutesTest < Minitest::Test
     class_names = request("/class-names")
     grades = request("/grades")
     scheduled_emails = request("/scheduled-emails")
+    settings = request("/settings")
+    calendar = request("/calendar")
     digest_preview = request("/scheduled-emails/digest-preview")
     backup_download = request("/scheduled-emails/backup-download")
 
@@ -79,6 +83,11 @@ class AppRoutesTest < Minitest::Test
     assert_includes scheduled_emails.body, "Scheduled Emails"
     assert_includes scheduled_emails.body, "Preview Daily Digest"
     assert_includes scheduled_emails.body, "Download Backup"
+    assert_equal "200", settings.code
+    assert_includes settings.body, "District Calendar"
+    assert_includes settings.body, "Scheduled Emails"
+    assert_equal "200", calendar.code
+    assert_includes calendar.body, "School Calendar"
     assert_equal "200", digest_preview.code
     assert_equal "text/html; charset=utf-8", digest_preview["Content-Type"]
     assert_equal "no-store", digest_preview["Cache-Control"]
@@ -92,6 +101,69 @@ class AppRoutesTest < Minitest::Test
     )
     assert_equal "no-store", backup_download["Cache-Control"]
     assert_equal backup_download.body.bytesize.to_s, backup_download["Content-Length"]
+  end
+
+  def test_settings_route_saves_calendar_feed_without_exposing_it_on_dashboard
+    feed_url = "https://calendar.example.test/private.ics?token=secret"
+    saved = request(
+      "/settings",
+      Net::HTTP::Post,
+      "calendar_feed_url" => feed_url,
+      "calendar_excluded_keywords" => "Elementary\nHigh School"
+    )
+
+    assert_equal "303", saved.code
+    assert_equal "/settings?saved=calendar", URI(saved["Location"]).request_uri
+    assert_equal feed_url, load_school_calendar_settings["feed_url"]
+    assert_equal(
+      ["Elementary", "High School"],
+      load_school_calendar_settings["excluded_keywords"]
+    )
+
+    $school_calendar_cache = {
+      feed_url: feed_url,
+      fetched_at: Time.now,
+      events: []
+    }
+    body = request("/").body
+
+    assert_includes body, "Up Next"
+    assert_includes body, 'href="/settings"'
+    refute_includes body, feed_url
+    refute_includes body, "Edit Class Names"
+  end
+
+  def test_up_next_shows_only_the_nearest_calendar_change
+    feed_url = "https://calendar.example.test/events.ics"
+    save_school_calendar_settings(feed_url)
+    today = Date.today
+    $school_calendar_cache = {
+      feed_url: feed_url,
+      fetched_at: Time.now,
+      events: [
+        {
+          "title" => "First Modified Day",
+          "description" => "",
+          "location" => "",
+          "start_date" => today + 2,
+          "end_date" => today + 2
+        },
+        {
+          "title" => "Second Modified Day",
+          "description" => "",
+          "location" => "",
+          "start_date" => today + 3,
+          "end_date" => today + 3
+        }
+      ]
+    }
+
+    body = request("/").body
+    up_next = body[/<section class="today-summary">.*?<\/section>/m]
+
+    assert_includes up_next, "First Modified Day"
+    refute_includes up_next, "Second Modified Day"
+    assert_includes body, "Second Modified Day"
   end
 
   def test_scheduled_email_route_saves_separate_recipients_and_preferences

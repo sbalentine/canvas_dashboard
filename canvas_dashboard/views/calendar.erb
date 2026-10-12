@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>School Calendar</title>
+</head>
+
+<body>
+  <main class="container settings-page calendar-page">
+    <header class="settings-header">
+      <div>
+        <h1>School Calendar</h1>
+        <div class="subtitle">Upcoming dates from the configured district calendar.</div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <% if calendar_events.empty? %>
+      <div class="card empty-state">
+        <div class="empty-check">✓</div>
+        <div>
+          <strong>No upcoming calendar dates.</strong>
+          <span>Check the calendar feed and filters in Settings.</span>
+        </div>
+      </div>
+    <% else %>
+      <div class="card calendar-card">
+        <% calendar_events.each do |event| %>
+          <div class="calendar-row">
+            <time datetime="<%= event["start_date"].iso8601 %>">
+              <span><%= event["start_date"].strftime("%b") %></span>
+              <strong><%= event["start_date"].strftime("%-d") %></strong>
+            </time>
+            <div>
+              <strong><%= h event["title"] %></strong>
+              <span>
+                <% if event["end_date"] > event["start_date"] %>
+                  Through <%= event["end_date"].strftime("%a, %b %-d") %>
+                <% else %>
+                  <%= event["start_date"].strftime("%A") %>
+                <% end %>
+                <% unless event["location"].empty? %>
+                  · <%= h event["location"] %>
+                <% end %>
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+  </main>
+</body>
+</html>

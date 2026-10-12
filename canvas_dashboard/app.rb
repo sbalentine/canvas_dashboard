@@ -15,6 +15,7 @@ require_relative "lib/event_journal"
 require_relative "lib/home_assistant_events"
 require_relative "lib/dashboard_data"
 require_relative "lib/email_backups"
+require_relative "lib/school_calendar"
 
 # ============================================================
 # Startup
@@ -131,6 +132,79 @@ server.mount_proc "/refresh" do |request, response|
   response.status = 303
   response["Location"] = "/"
   response.body = ""
+end
+
+# ============================================================
+# Settings
+# ============================================================
+
+server.mount_proc "/settings" do |request, response|
+  calendar_error = nil
+
+  if request.request_method == "POST"
+    begin
+      save_school_calendar_settings(
+        request.query["calendar_feed_url"],
+        request.query["calendar_excluded_keywords"]
+      )
+      response.status = 303
+      response["Location"] = "/settings?saved=calendar"
+      response.body = ""
+      next
+    rescue ArgumentError => e
+      calendar_error = e.message
+      response.status = 422
+    end
+  elsif request.request_method != "GET"
+    response.status = 405
+    response["Allow"] = "GET, POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  calendar_settings = load_school_calendar_settings
+  template = ERB.new(File.read(File.join(APP_ROOT, "views", "settings.erb")))
+
+  response.status = 200 if request.request_method == "GET"
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Settings error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load settings."
+end
+
+# ============================================================
+# School Calendar
+# ============================================================
+
+server.mount_proc "/calendar" do |request, response|
+  unless request.request_method == "GET"
+    response.status = 405
+    response["Allow"] = "GET"
+    response.body = "Method not allowed"
+    next
+  end
+
+  today = Date.today
+  calendar_events = school_calendar_events.select do |event|
+    event["end_date"] >= today
+  end
+  template = ERB.new(File.read(File.join(APP_ROOT, "views", "calendar.erb")))
+
+  response.status = 200
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "School calendar error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load the school calendar."
 end
 
 def todo_form_fields(request, data)

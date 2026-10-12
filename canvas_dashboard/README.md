@@ -8,7 +8,7 @@ The app includes a branded icon and logo for the Home Assistant app store and ap
 
 Set `canvas_url` to your school's Canvas URL (for example `https://your-school.instructure.com`). Set `canvas_token` to the student's Canvas API token. Set `token_expires` to the token expiration date in `YYYY-MM-DD` format.
 
-The web interface is exposed on port `4567`. Successful Canvas responses, class-name mappings, and the event journal are retained in the add-on data directory.
+The web interface is exposed on port `4567`. Successful Canvas responses, class-name mappings, calendar feed settings, and the event journal are retained in the add-on data directory. Use the dashboard's **Settings** page to add an iCalendar (ICS) district feed; the feed URL is stored only in the add-on data directory.
 
 ## Home Assistant Events
 

@@ -327,6 +327,14 @@ a:hover {
   color: var(--danger);
 }
 
+.up-next-items .schedule-change {
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #f0f1ff;
+  color: #4753bd;
+  font-weight: 700;
+}
+
 .refresh-button {
   min-height: 42px;
   padding: 0 16px;
@@ -1114,11 +1122,14 @@ a:hover {
 }
 
 .grade-row[hidden],
-.grade-more-button[hidden] {
+.grade-more-button[hidden],
+.calendar-row[hidden],
+.calendar-more-button[hidden] {
   display: none;
 }
 
-.grade-more-button {
+.grade-more-button,
+.calendar-more-button {
   display: block;
   margin: 12px auto 0;
   padding: 8px 12px;
@@ -1129,10 +1140,13 @@ a:hover {
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  text-align: center;
 }
 
 .grade-more-button:hover,
-.grade-more-button:focus-visible {
+.grade-more-button:focus-visible,
+.calendar-more-button:hover,
+.calendar-more-button:focus-visible {
   text-decoration: underline;
 }
 
@@ -1243,6 +1257,57 @@ a:hover {
   font-weight: 700;
 }
 
+.calendar-card {
+  padding: 2px 18px;
+}
+
+.calendar-row {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+  padding: 13px 0;
+  border-top: 1px solid var(--border);
+}
+
+.calendar-row:first-child {
+  border-top: 0;
+}
+
+.calendar-row time {
+  overflow: hidden;
+  border: 1px solid #c9cfff;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.calendar-row time span {
+  display: block;
+  padding: 3px;
+  background: #e8eaff;
+  color: #3943a7;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.calendar-row time strong {
+  display: block;
+  padding: 4px;
+  font-size: 20px;
+}
+
+.calendar-row > div > strong,
+.calendar-row > div > span {
+  display: block;
+}
+
+.calendar-row > div > span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 /* ==========================================================
    Class Name Settings
    ========================================================== */
@@ -1269,6 +1334,97 @@ a:hover {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
+}
+
+.settings-hub-page {
+  max-width: 860px;
+}
+
+.calendar-settings-card {
+  margin-bottom: 16px;
+}
+
+.calendar-settings-card h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.calendar-settings-card label > span,
+.calendar-settings-card label > small {
+  display: block;
+}
+
+.calendar-settings-card label > span {
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.calendar-settings-card input {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+}
+
+.calendar-settings-card textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.calendar-keywords-field {
+  display: block;
+  margin-top: 18px;
+}
+
+.calendar-settings-card label > small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.settings-link-card {
+  display: block;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.settings-link-card:hover {
+  border-color: #c9cfff;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+
+.settings-link-card strong,
+.settings-link-card span {
+  display: block;
+}
+
+.settings-link-card strong {
+  margin-bottom: 5px;
+  color: var(--purple);
+  font-size: 17px;
+}
+
+.settings-link-card span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .class-name-settings {
@@ -1875,6 +2031,10 @@ a:hover {
   .settings-header > a {
     display: inline-block;
     margin-top: 12px;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
   }
 
   .class-name-row {
