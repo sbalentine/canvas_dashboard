@@ -350,6 +350,10 @@ def digest_data(now: Time.now)
     "missing" => digest_missing_assignments(data),
     "due_today" => digest_assignments_for(data, today),
     "due_tomorrow" => digest_assignments_for(data, today + 1),
+    "important_calendar_dates" => upcoming_school_calendar_events(
+      school_calendar_events(now: now),
+      today: today
+    ),
     "recent_grades" => digest_recent_grades(data, overrides, now),
     "data" => data,
     "mappings" => mappings
@@ -404,6 +408,22 @@ def digest_text_body(digest, now)
       lines << "Nothing due."
     else
       assignments.each { |assignment| lines << digest_assignment_text(assignment, digest) }
+    end
+  end
+
+  lines.concat(["", "IMPORTANT CALENDAR DATES"])
+  if digest["important_calendar_dates"].empty?
+    lines << "No important dates in the next 30 days."
+  else
+    digest["important_calendar_dates"].each do |event|
+      date_label =
+        if event["end_date"] > event["start_date"]
+          "#{event["start_date"].strftime("%A, %B %-d")} through " \
+            "#{event["end_date"].strftime("%A, %B %-d")}"
+        else
+          event["start_date"].strftime("%A, %B %-d")
+        end
+      lines << "#{event["title"]} - #{date_label}"
     end
   end
 
@@ -570,6 +590,39 @@ def digest_html_body(digest, now)
       end.join
     end
 
+  calendar_rows =
+    if digest["important_calendar_dates"].empty?
+      '<tr><td style="padding:12px;color:#667085;">No important dates in the next 30 days.</td></tr>'
+    else
+      digest["important_calendar_dates"].map do |event|
+        date_label =
+          if event["end_date"] > event["start_date"]
+            "#{event["start_date"].strftime("%a, %b %-d")} through " \
+              "#{event["end_date"].strftime("%a, %b %-d")}"
+          else
+            event["start_date"].strftime("%A, %b %-d")
+          end
+        location =
+          if event["location"].empty?
+            ""
+          else
+            "<br><span style=\"color:#667085;font-size:12px;\">" \
+              "#{CGI.escapeHTML(event["location"])}</span>"
+          end
+
+        <<~HTML
+          <tr>
+            <td style="padding:10px 12px;border-bottom:1px solid #d9d6fe;">
+              <strong>#{CGI.escapeHTML(event["title"])}</strong>#{location}
+            </td>
+            <td style="padding:10px 12px;border-bottom:1px solid #d9d6fe;text-align:right;white-space:nowrap;">
+              #{date_label}
+            </td>
+          </tr>
+        HTML
+      end.join
+    end
+
   <<~HTML
     <!doctype html>
     <html>
@@ -619,6 +672,11 @@ def digest_html_body(digest, now)
           #{assignment_section.call("Missing Work", digest["missing"])}
           #{assignment_section.call("Due Today", digest["due_today"])}
           #{assignment_section.call("Due Tomorrow", digest["due_tomorrow"])}
+
+          <h2 style="margin:28px 0 8px;font-size:20px;color:#4753bd;">Important Calendar Dates</h2>
+          <table role="presentation" style="width:100%;border:1px solid #d9d6fe;border-collapse:collapse;border-radius:12px;background:#f4f3ff;">
+            #{calendar_rows}
+          </table>
 
           <h2 style="margin:28px 0 8px;font-size:20px;color:#344054;">Grades Posted in the Last 7 Days</h2>
           <table role="presentation" style="width:100%;border:1px solid #eaecf0;border-collapse:collapse;border-radius:12px;background:#ffffff;">

@@ -7,16 +7,20 @@ class EmailBackupsTest < Minitest::Test
     FileUtils.rm_f(GRADE_OVERRIDES_FILE)
     FileUtils.rm_f(COURSE_NAME_MAPPINGS_FILE)
     FileUtils.rm_f(HIDDEN_COURSES_FILE)
+    FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
     ENV["GMAIL_SENDER"] = ""
     ENV["GMAIL_APP_PASSWORD"] = ""
     $dashboard_data = base_data
     $event_journal = { "next_id" => 1, "events" => [] }
     $scheduled_email_attempts = {}
+    $school_calendar_cache = nil
   end
 
   def teardown
     ENV["GMAIL_SENDER"] = ""
     ENV["GMAIL_APP_PASSWORD"] = ""
+    FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
+    $school_calendar_cache = nil
   end
 
   def base_data
@@ -180,6 +184,28 @@ class EmailBackupsTest < Minitest::Test
       assignment(31, 1, "Today Homework", "2026-10-11T15:00:00-07:00"),
       assignment(32, 2, "Tomorrow Project", "2026-10-12T16:00:00-07:00")
     ]
+    feed_url = "https://calendar.example.test/events.ics"
+    save_school_calendar_settings(feed_url, "Elementary")
+    $school_calendar_cache = {
+      feed_url: feed_url,
+      fetched_at: now,
+      events: [
+        {
+          "title" => "Middle School Modified Day",
+          "description" => "",
+          "location" => "Middle schools",
+          "start_date" => Date.new(2026, 10, 15),
+          "end_date" => Date.new(2026, 10, 15)
+        },
+        {
+          "title" => "Elementary Modified Day",
+          "description" => "",
+          "location" => "",
+          "start_date" => Date.new(2026, 10, 16),
+          "end_date" => Date.new(2026, 10, 16)
+        }
+      ]
+    }
 
     digest = digest_data(now: now)
     html = digest_html_body(digest, now)
@@ -197,9 +223,16 @@ class EmailBackupsTest < Minitest::Test
     assert_includes html, "Friday, October 9"
     assert_includes html, "Today Homework"
     assert_includes html, "Tomorrow Project"
+    assert_includes html, "Important Calendar Dates"
+    assert_includes html, "Middle School Modified Day"
+    assert_includes html, "Middle schools"
+    refute_includes html, "Elementary Modified Day"
     assert_operator html.index("Lab"), :<, html.index("Quiz")
     refute_includes html, "Old Lab"
     assert_includes text, "MISSING WORK"
+    assert_includes text, "IMPORTANT CALENDAR DATES"
+    assert_includes text, "Middle School Modified Day - Thursday, October 15"
+    refute_includes text, "Elementary Modified Day"
     assert_includes text, "GRADES POSTED IN THE LAST 7 DAYS"
   end
 
