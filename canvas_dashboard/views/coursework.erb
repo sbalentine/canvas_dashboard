@@ -1,0 +1,205 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Manual Classes &amp; Assignments</title>
+</head>
+
+<body>
+  <main class="container settings-page coursework-settings-page">
+    <header class="settings-header">
+      <div>
+        <h1>Manual Classes &amp; Assignments</h1>
+        <div class="subtitle">
+          Track classes and work that are not available in Canvas.
+        </div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <section class="card coursework-settings-section">
+      <h2>Classes</h2>
+
+      <% if coursework["courses"].empty? %>
+        <p class="settings-intro">Add a class before creating assignments.</p>
+      <% end %>
+
+      <div class="coursework-list">
+        <% coursework["courses"].sort_by { |_id, course| course["name"] }.each do |id, course| %>
+          <form class="coursework-row" method="post" action="/coursework">
+            <input type="hidden" name="action" value="update_course">
+            <input type="hidden" name="id" value="<%= h id %>">
+
+            <label class="coursework-name-field">
+              <span>Class name</span>
+              <input
+                type="text"
+                name="name"
+                value="<%= h course["name"] %>"
+                maxlength="80"
+                required
+              >
+            </label>
+
+            <div class="coursework-row-actions">
+              <button type="submit">Save</button>
+              <button
+                class="danger-button"
+                type="submit"
+                name="action"
+                value="delete_course"
+              >
+                Remove
+              </button>
+            </div>
+          </form>
+        <% end %>
+      </div>
+
+      <form class="coursework-create-form" method="post" action="/coursework">
+        <input type="hidden" name="action" value="create_course">
+
+        <label class="coursework-name-field">
+          <span>New class</span>
+          <input
+            type="text"
+            name="name"
+            maxlength="80"
+            placeholder="Class name"
+            required
+          >
+        </label>
+
+        <button type="submit">+ Add Class</button>
+      </form>
+    </section>
+
+    <section class="card coursework-settings-section">
+      <h2>Assignments</h2>
+
+      <% if coursework["assignments"].empty? %>
+        <p class="settings-intro">No manual assignments have been added.</p>
+      <% end %>
+
+      <div class="coursework-list">
+        <%
+          assignments = coursework["assignments"].sort_by do |_id, assignment|
+            assignment["due_at"]
+          end
+        %>
+        <% assignments.each do |id, assignment| %>
+          <form class="coursework-row assignment-coursework-row" method="post" action="/coursework">
+            <input type="hidden" name="action" value="update_assignment">
+            <input type="hidden" name="id" value="<%= h id %>">
+
+            <label class="coursework-name-field">
+              <span>Assignment</span>
+              <input
+                type="text"
+                name="name"
+                value="<%= h assignment["name"] %>"
+                maxlength="255"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Class</span>
+              <select name="course_id" required>
+                <% coursework["courses"].sort_by { |_course_id, course| course["name"] }.each do |course_id, course| %>
+                  <option
+                    value="<%= h course_id %>"
+                    <%= "selected" if course_id == assignment["course_id"] %>
+                  >
+                    <%= h course["name"] %>
+                  </option>
+                <% end %>
+              </select>
+            </label>
+
+            <label>
+              <span>Due</span>
+              <input
+                type="datetime-local"
+                name="due_at"
+                value="<%= h Time.parse(assignment["due_at"]).getlocal.strftime("%Y-%m-%dT%H:%M") %>"
+                required
+              >
+            </label>
+
+            <label class="coursework-completed-field">
+              <input
+                type="checkbox"
+                name="completed"
+                value="true"
+                <%= "checked" if assignment["completed"] %>
+              >
+              <span>Completed</span>
+            </label>
+
+            <div class="coursework-row-actions">
+              <button type="submit">Save</button>
+              <button
+                class="danger-button"
+                type="submit"
+                name="action"
+                value="delete_assignment"
+              >
+                Remove
+              </button>
+            </div>
+          </form>
+        <% end %>
+      </div>
+
+      <% unless coursework["courses"].empty? %>
+        <form class="coursework-create-form assignment-coursework-row" method="post" action="/coursework">
+          <input type="hidden" name="action" value="create_assignment">
+
+          <label class="coursework-name-field">
+            <span>New assignment</span>
+            <input
+              type="text"
+              name="name"
+              maxlength="255"
+              placeholder="Assignment name"
+              required
+            >
+          </label>
+
+          <label>
+            <span>Class</span>
+            <select name="course_id" required>
+              <% coursework["courses"].sort_by { |_id, course| course["name"] }.each do |id, course| %>
+                <option value="<%= h id %>"><%= h course["name"] %></option>
+              <% end %>
+            </select>
+          </label>
+
+          <label>
+            <span>Due</span>
+            <input
+              type="datetime-local"
+              name="due_at"
+              value="<%= (Time.now + 86_400).getlocal.strftime("%Y-%m-%dT%H:%M") %>"
+              required
+            >
+          </label>
+
+          <button type="submit">+ Add Assignment</button>
+        </form>
+      <% end %>
+    </section>
+  </main>
+</body>
+</html>

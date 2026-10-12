@@ -1009,6 +1009,14 @@ a:hover {
   font-size: 13px;
 }
 
+.grade-card-edit-link {
+  display: inline-block;
+  margin-top: 7px;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .official-grade-badge {
   display: inline-block;
   margin-left: 6px;
@@ -1275,6 +1283,31 @@ a:hover {
   max-width: 920px;
 }
 
+.grade-course-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 4px;
+  overflow-x: auto;
+}
+
+.grade-course-filter a {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.grade-course-filter a.is-selected {
+  border-color: var(--purple);
+  background: var(--purple);
+  color: white;
+}
+
 .grade-settings h2 {
   margin: 0;
   font-size: 21px;
@@ -1463,6 +1496,22 @@ a:hover {
   font: inherit;
 }
 
+.class-name-row .hide-class-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.class-name-row .hide-class-field input {
+  width: 18px;
+  min-height: 18px;
+  height: 18px;
+}
+
 .settings-actions {
   display: flex;
   align-items: center;
@@ -1489,6 +1538,111 @@ a:hover {
   font-size: 14px;
   font-weight: 800;
   cursor: pointer;
+}
+
+/* ==========================================================
+   Manual Coursework Settings
+   ========================================================== */
+
+.coursework-settings-page {
+  max-width: 980px;
+}
+
+.coursework-settings-section {
+  margin-bottom: 16px;
+}
+
+.coursework-settings-section h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.coursework-row,
+.coursework-create-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.coursework-list .coursework-row:first-child {
+  border-top: 0;
+}
+
+.coursework-create-form {
+  margin-top: 4px;
+}
+
+.assignment-coursework-row {
+  grid-template-columns: minmax(180px, 1.5fr) minmax(140px, 1fr) 190px auto auto;
+}
+
+.coursework-row label > span,
+.coursework-create-form label > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coursework-row input[type="text"],
+.coursework-row input[type="datetime-local"],
+.coursework-row select,
+.coursework-create-form input,
+.coursework-create-form select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.coursework-completed-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+}
+
+.coursework-completed-field input {
+  width: 18px;
+  height: 18px;
+}
+
+.coursework-completed-field > span {
+  margin: 0 !important;
+}
+
+.coursework-row-actions {
+  display: flex;
+  gap: 7px;
+}
+
+.coursework-row button,
+.coursework-create-form button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--purple);
+  color: white;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.coursework-row .danger-button {
+  border: 1px solid var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
 }
 
 /* ==========================================================
@@ -1578,6 +1732,16 @@ a:hover {
 
   .custom-grade-row:not(.new-custom-grade) {
     grid-template-columns: 1fr;
+  }
+
+  .coursework-row,
+  .coursework-create-form,
+  .assignment-coursework-row {
+    grid-template-columns: 1fr;
+  }
+
+  .coursework-row-actions {
+    justify-content: flex-end;
   }
 
   .assignment-grade-row {

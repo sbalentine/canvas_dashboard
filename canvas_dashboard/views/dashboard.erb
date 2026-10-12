@@ -109,7 +109,7 @@
           "percentage" => calculated.round,
           "letter" => letter_grade(calculated)
         }
-      end.sort_by { |grade| grade["name"] }
+      end.sort_by { |grade| [-grade["percentage"], grade["name"]] }
 
       now = Time.now
       today = now.getlocal.to_date
@@ -600,8 +600,13 @@
           📅 Upcoming Assignments
         </h2>
 
-        <div class="section-note">
-          <%= upcoming.length %> upcoming
+        <div class="section-header-actions">
+          <div class="section-note">
+            <%= upcoming.length %> upcoming
+          </div>
+          <a class="section-action-link" href="/coursework">
+            Manage Manual Assignments
+          </a>
         </div>
 
       </div>
@@ -861,6 +866,13 @@
                 <% end %>
               </div>
 
+              <a
+                class="grade-card-edit-link"
+                href="/grades?course_id=<%= h CGI.escape(course_id) %>"
+              >
+                Edit this class
+              </a>
+
             </div>
 
             <div class="grade-percent">
@@ -1016,6 +1028,9 @@
       </a>
       <a class="class-names-link" href="/grades">
         Edit Assignment Grades
+      </a>
+      <a class="class-names-link" href="/coursework">
+        Manual Classes &amp; Assignments
       </a>
     </footer>
 

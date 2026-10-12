@@ -9,6 +9,7 @@ The dashboard provides a simple view of the school information that matters most
 * 📅 Assignments due in the next 7 days
 * ✅ Submission status
 * 📊 Editable assignment grades, calculated course estimates, and recent scores
+* ✍️ Manual classes and assignments for coursework outside Canvas
 * 🔑 Canvas API token expiration
 * 💾 Cached data when Canvas is temporarily unavailable
 * 🏠 Home Assistant status and change-event API
@@ -76,6 +77,12 @@ Shows assignments due during the next seven days, including:
 
 Assignments link back to Canvas when Canvas provides an assignment URL.
 
+### ✍️ Manual Classes and Assignments
+
+Use **Manual Classes & Assignments** from the dashboard to track coursework that is not available in Canvas. Add a class, create assignments with due dates and times, and mark assignments complete from the management page.
+
+Incomplete future assignments appear in **Upcoming Assignments** and incomplete overdue assignments appear in **Missing Assignments**. Manual coursework is stored in `/data/manual_coursework.json` for the Home Assistant add-on or `tmp/manual_coursework.json` locally, so Canvas refreshes do not overwrite it.
+
 ### 📊 Grade Summary
 
 Calculates a current grade for each course from graded assignments returned by the Canvas API.
@@ -85,6 +92,8 @@ The dashboard also shows recent individual assignment grades.
 > **Note:** These percentages are calculated from the assignments available through the API and may not exactly match the official Canvas course grade, particularly when a teacher uses weighted assignment groups, grading periods, dropped assignments, or other gradebook rules.
 
 Use **Edit Assignment Grades** to correct stale Canvas scores or add assignments that only appear in Infinite Campus. Existing Canvas assignments accept optional earned-point and possible-point overrides; leaving both blank uses Canvas values. Infinite Campus-only assignments include a course, name, earned points, possible points, and date. Course percentages are recalculated from the combined assignment list.
+
+Use **Edit this class** on an individual grade card to open an editor containing only that class's assignments. The class chips at the top of the editor switch between classes, and **All Classes** opens the complete grade editor. Saving one class does not change grade edits belonging to another class.
 
 Edits are stored in `/data/grade_overrides.json` for the Home Assistant add-on or `tmp/grade_overrides.json` locally. Values stay local to the dashboard and are not sent to Canvas or Infinite Campus.
 
@@ -114,7 +123,9 @@ The interface is responsive and includes PWA/mobile metadata so it can be added 
 
 ### Course Name Mappings
 
-Use **Edit Class Names** at the bottom of the dashboard to replace long Canvas course names with shorter labels. Aliases are stored by Canvas course ID in `/data/course_name_mappings.json` for the Home Assistant add-on or `tmp/course_name_mappings.json` locally. Both locations are excluded from source control. Blank aliases use the full Canvas course name.
+Use **Edit Class Names** at the bottom of the dashboard to replace long Canvas course names with shorter labels or hide Canvas classes that are not needed. Hidden classes are removed locally from dashboard assignments, missing work, grades, to-dos, summaries, and course selectors without changing the Canvas enrollment. Return to **Edit Class Names** and clear **Hide from dashboard** to restore one.
+
+Aliases are stored by Canvas course ID in `/data/course_name_mappings.json` for the Home Assistant add-on or `tmp/course_name_mappings.json` locally. Hidden course IDs are stored in `/data/hidden_courses.json` or `tmp/hidden_courses.json`. These files are excluded from source control.
 
 ### Home Assistant Events
 

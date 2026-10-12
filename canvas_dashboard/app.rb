@@ -9,6 +9,8 @@ require_relative "lib/canvas"
 require_relative "lib/helpers"
 require_relative "lib/course_name_mappings"
 require_relative "lib/grade_overrides"
+require_relative "lib/hidden_courses"
+require_relative "lib/manual_coursework"
 require_relative "lib/event_journal"
 require_relative "lib/home_assistant_events"
 require_relative "lib/dashboard_data"
@@ -47,7 +49,7 @@ DASHBOARD_SERVER = server
 
 server.mount_proc "/" do |_request, response|
   begin
-    data = dashboard_data
+    data = dashboard_data_with_manual
 
     unless data
       response.status = 200
@@ -329,13 +331,23 @@ def class_name_mapping_fields(request, data)
   end
 end
 
+def hidden_course_fields(request, data)
+  (data["courses"] || []).filter_map do |course|
+    next if course["_manual"]
+
+    course_id = course["id"].to_s
+    course_id if request.query["hidden_course_#{course_id}"] == "true"
+  end
+end
+
 server.mount_proc "/class-names" do |request, response|
-  data = dashboard_data || {}
+  data = dashboard_data_with_manual(include_hidden: true) || {}
 
   if request.request_method == "POST"
     begin
       mappings = class_name_mapping_fields(request, data)
       save_course_name_mappings(mappings)
+      save_hidden_course_ids(hidden_course_fields(request, data))
 
       response.status = 303
       response["Location"] = "/"
@@ -357,6 +369,7 @@ server.mount_proc "/class-names" do |request, response|
   end
 
   mappings = load_course_name_mappings
+  hidden_course_ids = load_hidden_course_ids
   template = ERB.new(
     File.read(File.join(APP_ROOT, "views", "class_names.erb"))
   )
@@ -371,6 +384,51 @@ rescue => e
   response.status = 500
   response["Content-Type"] = "text/plain; charset=utf-8"
   response.body = "Unable to load class name settings."
+end
+
+# ============================================================
+# Manual Classes and Assignments
+# ============================================================
+
+server.mount_proc "/coursework" do |request, response|
+  if request.request_method == "POST"
+    begin
+      update_manual_coursework(request)
+
+      response.status = 303
+      response["Location"] = "/coursework"
+      response.body = ""
+    rescue ArgumentError => e
+      response.status = 422
+      response["Content-Type"] = "text/plain; charset=utf-8"
+      response.body = e.message
+    end
+
+    next
+  end
+
+  unless request.request_method == "GET"
+    response.status = 405
+    response["Allow"] = "GET, POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  coursework = load_manual_coursework
+  template = ERB.new(
+    File.read(File.join(APP_ROOT, "views", "coursework.erb"))
+  )
+
+  response.status = 200
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Manual coursework error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load manual classes and assignments."
 end
 
 # ============================================================
@@ -389,10 +447,29 @@ rescue ArgumentError, TypeError
   raise ArgumentError, "#{field_name} must be a valid number"
 end
 
-def grade_override_fields(request, data, existing)
-  canvas = {}
+def grade_override_fields(request, data, existing, course_id: nil)
+  target_submissions = (data["grades"] || []).select do |submission|
+    course_id.nil? ||
+      submission.dig("assignment", "course_id").to_s == course_id
+  end
+  target_assignment_ids = target_submissions.filter_map do |submission|
+    assignment_id =
+      submission["assignment_id"] ||
+      submission.dig("assignment", "id")
 
-  (data["grades"] || []).each do |submission|
+    assignment_id&.to_s
+  end
+
+  canvas =
+    if course_id
+      existing.fetch("canvas", {}).reject do |assignment_id, _override|
+        target_assignment_ids.include?(assignment_id)
+      end
+    else
+      {}
+    end
+
+  target_submissions.each do |submission|
     assignment_id =
       submission["assignment_id"] ||
       submission.dig("assignment", "id")
@@ -417,10 +494,24 @@ def grade_override_fields(request, data, existing)
     }
   end
 
-  valid_course_ids = (data["courses"] || []).map { |course| course["id"].to_s }
-  custom = {}
+  valid_course_ids =
+    if course_id
+      [course_id]
+    else
+      (data["courses"] || []).map { |course| course["id"].to_s }
+    end
+  custom =
+    if course_id
+      existing.fetch("custom", {}).reject do |_grade_id, grade|
+        grade["course_id"].to_s == course_id
+      end
+    else
+      {}
+    end
 
-  existing.fetch("custom", {}).each_key do |grade_id|
+  existing.fetch("custom", {}).each do |grade_id, grade|
+    next if course_id && grade["course_id"].to_s != course_id
+
     name = request.query["custom_#{grade_id}_name"].to_s.strip
     next if name.empty?
 
@@ -484,12 +575,32 @@ rescue Date::Error
 end
 
 server.mount_proc "/grades" do |request, response|
-  data = dashboard_data || {}
+  data = dashboard_data_with_manual || {}
+  selected_course_id = request.query["course_id"].to_s
+  selected_course_id = nil if selected_course_id.empty?
+  selected_course =
+    if selected_course_id
+      (data["courses"] || []).find do |course|
+        course["id"].to_s == selected_course_id
+      end
+    end
+
+  if selected_course_id && !selected_course
+    response.status = 404
+    response["Content-Type"] = "text/plain; charset=utf-8"
+    response.body = "Class not found"
+    next
+  end
 
   if request.request_method == "POST"
     begin
       existing = load_grade_overrides
-      overrides = grade_override_fields(request, data, existing)
+      overrides = grade_override_fields(
+        request,
+        data,
+        existing,
+        course_id: selected_course_id
+      )
       save_grade_overrides(overrides)
 
       response.status = 303
@@ -541,7 +652,7 @@ server.mount_proc "/api/status" do |request, response|
     next
   end
 
-  data = dashboard_data || {}
+  data = dashboard_data_with_manual || {}
   now = Time.now
   today = now.getlocal.to_date
   tomorrow = today + 1

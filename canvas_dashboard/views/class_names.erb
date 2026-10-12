@@ -19,7 +19,9 @@
     <header class="settings-header">
       <div>
         <h1>Edit Class Names</h1>
-        <div class="subtitle">Canvas course names stay unchanged.</div>
+        <div class="subtitle">
+          Rename classes locally or hide Canvas classes that are not needed.
+        </div>
       </div>
 
       <a href="/">Back to Dashboard</a>
@@ -27,7 +29,7 @@
 
     <form class="card class-name-settings" method="post" action="/class-names">
       <% (data["courses"] || []).sort_by { |course| course["name"].to_s.strip }.each do |course| %>
-        <label class="class-name-row">
+        <div class="class-name-row">
           <span class="canvas-class-name">
             <%= h course["name"].to_s.strip %>
           </span>
@@ -39,12 +41,24 @@
             maxlength="80"
             placeholder="Use Canvas name"
           >
-        </label>
+
+          <% unless course["_manual"] %>
+            <label class="hide-class-field">
+              <input
+                type="checkbox"
+                name="hidden_course_<%= h course["id"] %>"
+                value="true"
+                <%= "checked" if hidden_course_ids.include?(course["id"].to_s) %>
+              >
+              <span>Hide from dashboard</span>
+            </label>
+          <% end %>
+        </div>
       <% end %>
 
       <div class="settings-actions">
         <a href="/">Cancel</a>
-        <button type="submit">Save Class Names</button>
+        <button type="submit">Save Class Settings</button>
       </div>
     </form>
   </main>

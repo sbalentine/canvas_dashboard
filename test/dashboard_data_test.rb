@@ -5,6 +5,8 @@ class DashboardDataTest < Minitest::Test
     FileUtils.rm_f(CACHE_FILE)
     FileUtils.rm_f(EVENT_JOURNAL_FILE)
     FileUtils.rm_f(GRADE_OVERRIDES_FILE)
+    FileUtils.rm_f(MANUAL_COURSEWORK_FILE)
+    FileUtils.rm_f(HIDDEN_COURSES_FILE)
     $dashboard_data = nil
     $last_successful_update = nil
     $last_refresh_error = nil

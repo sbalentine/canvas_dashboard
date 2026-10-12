@@ -20,6 +20,8 @@ end
 class AppRoutesTest < Minitest::Test
   def setup
     FileUtils.rm_f(GRADE_OVERRIDES_FILE)
+    FileUtils.rm_f(MANUAL_COURSEWORK_FILE)
+    FileUtils.rm_f(HIDDEN_COURSES_FILE)
     $dashboard_data = {
       "profile" => { "short_name" => "Avery" },
       "courses" => [{ "id" => 1, "name" => "Math" }],
@@ -69,6 +71,25 @@ class AppRoutesTest < Minitest::Test
     assert_includes class_names.body, "Class Names"
     assert_equal "200", grades.code
     assert_includes grades.body, "Edit Assignment Grades"
+  end
+
+  def test_grade_snapshot_is_sorted_highest_to_lowest
+    $dashboard_data["courses"] << { "id" => 2, "name" => "Science" }
+    $dashboard_data["course_names"]["2"] = "Science"
+    $dashboard_data["grades"] << {
+      "assignment_id" => 20,
+      "score" => 10,
+      "assignment" => {
+        "id" => 20,
+        "course_id" => 2,
+        "name" => "Lab",
+        "points_possible" => 10
+      }
+    }
+
+    body = request("/").body
+
+    assert_operator body.index("Science:"), :<, body.index("Math:")
   end
 
   def test_grade_route_saves_and_clears_official_grades
@@ -142,6 +163,85 @@ class AppRoutesTest < Minitest::Test
     assert_equal [25.0, 20.0], grades.map { |grade| grade["points_possible"] }
   end
 
+  def test_grade_editor_filters_one_class_and_preserves_other_overrides
+    $dashboard_data["courses"] << { "id" => 2, "name" => "Science" }
+    $dashboard_data["course_names"]["2"] = "Science"
+    $dashboard_data["grades"] << {
+      "assignment_id" => 20,
+      "score" => 7,
+      "assignment" => {
+        "id" => 20,
+        "course_id" => 2,
+        "name" => "Lab",
+        "points_possible" => 10
+      }
+    }
+    save_grade_overrides(
+      "canvas" => {
+        "10" => { "score" => 9, "points_possible" => nil },
+        "20" => { "score" => 8, "points_possible" => nil }
+      },
+      "custom" => {
+        "math-grade" => {
+          "course_id" => "1",
+          "name" => "Math Test",
+          "score" => 18,
+          "points_possible" => 20,
+          "graded_at" => "2026-10-01"
+        },
+        "science-grade" => {
+          "course_id" => "2",
+          "name" => "Science Test",
+          "score" => 19,
+          "points_possible" => 20,
+          "graded_at" => "2026-10-02"
+        }
+      }
+    )
+
+    editor = request("/grades?course_id=1")
+
+    assert_equal "200", editor.code
+    assert_includes editor.body, "Edit Math Grades"
+    assert_includes editor.body, "Quiz"
+    assert_includes editor.body, "Math Test"
+    refute_includes editor.body, "Lab"
+    refute_includes editor.body, "Science Test"
+
+    saved = request(
+      "/grades",
+      Net::HTTP::Post,
+      "course_id" => "1",
+      "canvas_10_score" => "9.5",
+      "canvas_10_points" => "",
+      "custom_math-grade_name" => "Math Test",
+      "custom_math-grade_course_id" => "1",
+      "custom_math-grade_score" => "18",
+      "custom_math-grade_points" => "20",
+      "custom_math-grade_date" => "2026-10-01"
+    )
+
+    assert_equal "303", saved.code
+    overrides = load_grade_overrides
+    assert_equal 9.5, overrides.dig("canvas", "10", "score")
+    assert_equal 8, overrides.dig("canvas", "20", "score")
+    assert overrides.fetch("custom").key?("science-grade")
+  end
+
+  def test_dashboard_links_each_grade_card_to_its_editor
+    dashboard = request("/")
+
+    assert_includes dashboard.body, "/grades?course_id=1"
+    assert_includes dashboard.body, "Edit this class"
+  end
+
+  def test_grade_editor_rejects_unknown_class
+    response = request("/grades?course_id=missing")
+
+    assert_equal "404", response.code
+    assert_equal "Class not found", response.body
+  end
+
   def test_status_route_exposes_home_assistant_contract
     response = request("/api/status")
     body = JSON.parse(response.body)
@@ -151,6 +251,88 @@ class AppRoutesTest < Minitest::Test
     assert_equal 0, body["latest_event_id"]
     assert_equal 0, body["missing_count"]
     assert_equal "no-cache", response["Cache-Control"]
+  end
+
+  def test_manual_coursework_routes_add_class_and_assignment
+    course_response = request(
+      "/coursework",
+      Net::HTTP::Post,
+      "action" => "create_course",
+      "name" => "Piano"
+    )
+
+    assert_equal "303", course_response.code
+    course_id = load_manual_coursework.fetch("courses").keys.first
+
+    assignment_response = request(
+      "/coursework",
+      Net::HTTP::Post,
+      "action" => "create_assignment",
+      "course_id" => course_id,
+      "name" => "Practice scales",
+      "due_at" => (Time.now + 86_400).strftime("%Y-%m-%dT%H:%M")
+    )
+
+    assert_equal "303", assignment_response.code
+
+    editor = request("/coursework")
+    dashboard = request("/")
+
+    assert_includes editor.body, "Piano"
+    assert_includes editor.body, "Practice scales"
+    assert_includes dashboard.body, "Practice scales"
+    assert_includes dashboard.body, "Piano"
+  end
+
+  def test_manual_coursework_route_validates_assignment_course
+    response = request(
+      "/coursework",
+      Net::HTTP::Post,
+      "action" => "create_assignment",
+      "course_id" => "missing",
+      "name" => "Practice scales",
+      "due_at" => (Time.now + 86_400).strftime("%Y-%m-%dT%H:%M")
+    )
+
+    assert_equal "422", response.code
+    assert_includes response.body, "valid class"
+  end
+
+  def test_class_settings_hide_and_restore_canvas_course
+    $dashboard_data["upcoming"] = [{
+      "assignment" => {
+        "id" => 11,
+        "course_id" => 1,
+        "name" => "Homework",
+        "due_at" => (Time.now + 86_400).iso8601
+      }
+    }]
+
+    hidden = request(
+      "/class-names",
+      Net::HTTP::Post,
+      "course_1" => "",
+      "hidden_course_1" => "true"
+    )
+
+    assert_equal "303", hidden.code
+    assert_equal ["1"], load_hidden_course_ids
+    refute_includes request("/").body, "Homework"
+    refute_includes request("/grades").body, "Quiz"
+
+    settings = request("/class-names")
+    assert_includes settings.body, "Math"
+    assert_match(/hidden_course_1[^>]+checked/, settings.body)
+
+    restored = request(
+      "/class-names",
+      Net::HTTP::Post,
+      "course_1" => ""
+    )
+
+    assert_equal "303", restored.code
+    assert_empty load_hidden_course_ids
+    assert_includes request("/").body, "Homework"
   end
 
   def test_events_route_filters_by_cursor_and_limit

@@ -3,6 +3,13 @@ require_relative "test_helper"
 class CourseNameMappingsTest < Minitest::Test
   def setup
     FileUtils.rm_f(COURSE_NAME_MAPPINGS_FILE)
+    FileUtils.rm_f(HIDDEN_COURSES_FILE)
+  end
+
+  def test_hidden_course_ids_round_trip
+    save_hidden_course_ids(["20", "10", "20"])
+
+    assert_equal ["10", "20"], load_hidden_course_ids
   end
 
   def test_missing_file_returns_empty_mapping

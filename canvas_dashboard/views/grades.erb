@@ -1,3 +1,11 @@
+<%
+  selected_course_id = nil unless defined?(selected_course_id)
+  selected_course = nil unless defined?(selected_course)
+  selected_course_name =
+    if selected_course
+      mappings.fetch(selected_course["id"].to_s, selected_course["name"])
+    end
+%>
 <!doctype html>
 <html>
 <head>
@@ -11,14 +19,16 @@
     rel="stylesheet"
     href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
   >
-  <title>Edit Assignment Grades</title>
+  <title><%= selected_course ? "Edit #{h selected_course_name} Grades" : "Edit Assignment Grades" %></title>
 </head>
 
 <body>
   <main class="container settings-page grade-settings-page">
     <header class="settings-header">
       <div>
-        <h1>Edit Assignment Grades</h1>
+        <h1>
+          <%= selected_course ? "Edit #{h selected_course_name} Grades" : "Edit Assignment Grades" %>
+        </h1>
         <div class="subtitle">
           Adjust stale Canvas values or add grades that only appear in Infinite Campus.
         </div>
@@ -27,7 +37,25 @@
       <a href="/">Back to Dashboard</a>
     </header>
 
+    <nav class="grade-course-filter" aria-label="Choose a class">
+      <a class="<%= "is-selected" unless selected_course %>" href="/grades">
+        All Classes
+      </a>
+      <% (data["courses"] || []).sort_by { |course| course["name"] }.each do |course| %>
+        <a
+          class="<%= "is-selected" if selected_course_id == course["id"].to_s %>"
+          href="/grades?course_id=<%= h CGI.escape(course["id"].to_s) %>"
+        >
+          <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
+        </a>
+      <% end %>
+    </nav>
+
     <form class="grade-settings" method="post" action="/grades">
+      <% if selected_course_id %>
+        <input type="hidden" name="course_id" value="<%= h selected_course_id %>">
+      <% end %>
+
       <section class="card">
         <h2>Canvas Assignments</h2>
         <p class="settings-intro">
@@ -40,6 +68,9 @@
               submission["assignment"] && (
                 submission["assignment_id"] ||
                 submission.dig("assignment", "id")
+              ) && (
+                selected_course_id.nil? ||
+                submission.dig("assignment", "course_id").to_s == selected_course_id
               )
             end.sort_by do |submission|
               [
@@ -116,6 +147,7 @@
         </p>
 
         <% overrides.fetch("custom", {}).each do |grade_id, grade| %>
+          <% next if selected_course_id && grade["course_id"].to_s != selected_course_id %>
           <div class="custom-grade-row">
             <label class="custom-grade-name">
               <span>Assignment</span>
@@ -130,7 +162,7 @@
             <label>
               <span>Course</span>
               <select name="custom_<%= h grade_id %>_course_id">
-                <% (data["courses"] || []).each do |course| %>
+                <% (data["courses"] || []).select { |course| selected_course_id.nil? || course["id"].to_s == selected_course_id }.each do |course| %>
                   <option
                     value="<%= h course["id"] %>"
                     <%= "selected" if course["id"].to_s == grade["course_id"].to_s %>
@@ -193,7 +225,7 @@
             <label>
               <span>Course</span>
               <select name="new_0_course_id">
-                <% (data["courses"] || []).each do |course| %>
+                <% (data["courses"] || []).select { |course| selected_course_id.nil? || course["id"].to_s == selected_course_id }.each do |course| %>
                   <option value="<%= h course["id"] %>">
                     <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
                   </option>
@@ -260,7 +292,7 @@
             <label>
               <span>Course</span>
               <select name="new___INDEX___course_id">
-                <% (data["courses"] || []).each do |course| %>
+                <% (data["courses"] || []).select { |course| selected_course_id.nil? || course["id"].to_s == selected_course_id }.each do |course| %>
                   <option value="<%= h course["id"] %>">
                     <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
                   </option>

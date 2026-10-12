@@ -201,7 +201,10 @@ def refresh_dashboard
     previous_data = dashboard_data
     data = fetch_dashboard_data
     removed_grade_overrides = reconcile_canvas_grade_overrides(data)
-    events = detect_dashboard_events(previous_data, data)
+    events = detect_dashboard_events(
+      dashboard_data_with_manual(previous_data),
+      dashboard_data_with_manual(data)
+    )
 
     save_cache(data)
     append_dashboard_events(events)

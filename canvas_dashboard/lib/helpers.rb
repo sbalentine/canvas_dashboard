@@ -59,6 +59,10 @@ def course_symbol(name)
 end
 
 def combined_grade_submissions(data, grade_overrides)
+  visible_course_ids = Array(data["courses"]).to_h do |course|
+    [course["id"].to_s, true]
+  end
+
   canvas_grades = (data["grades"] || []).select do |submission|
     assignment = submission["assignment"]
 
@@ -93,6 +97,8 @@ def combined_grade_submissions(data, grade_overrides)
   end
 
   grade_overrides.fetch("custom", {}).each do |grade_id, grade|
+    next unless visible_course_ids.key?(grade["course_id"].to_s)
+
     combined << {
       "_official_override" => true,
       "_custom_grade" => true,
