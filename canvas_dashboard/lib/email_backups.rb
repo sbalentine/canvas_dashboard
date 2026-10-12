@@ -497,7 +497,7 @@ def digest_html_body(digest, now)
       cards = digest["grade_snapshot"].map do |grade|
         colors = digest_grade_colors(grade["letter"])
         <<~HTML
-          <td style="width:50%;padding:8px;vertical-align:top;">
+          <td class="grade-card-cell" style="width:50%;padding:8px;vertical-align:top;">
             <div style="padding:14px;border:1px solid #{colors[:foreground]};border-top:4px solid #{colors[:foreground]};border-radius:12px;text-align:center;background:#{colors[:background]};">
               <div style="font-size:13px;color:#475467;">#{CGI.escapeHTML(grade["name"])}</div>
               <div style="margin-top:5px;font-size:26px;font-weight:800;color:#{colors[:foreground]};">#{grade["percentage"]}%</div>
@@ -569,13 +569,45 @@ def digest_html_body(digest, now)
   <<~HTML
     <!doctype html>
     <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          @media only screen and (max-width: 600px) {
+            .digest-wrapper {
+              padding: 12px !important;
+            }
+
+            .digest-header {
+              margin-bottom: 16px !important;
+              padding: 18px !important;
+              border-radius: 12px !important;
+            }
+
+            .digest-title {
+              font-size: 23px !important;
+              line-height: 1.25 !important;
+            }
+
+            .grade-snapshot {
+              padding: 14px !important;
+              border-radius: 12px !important;
+            }
+
+            .grade-card-cell {
+              display: block !important;
+              width: auto !important;
+              padding: 6px 0 !important;
+            }
+          }
+        </style>
+      </head>
       <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;color:#1d2939;">
-        <div style="max-width:720px;margin:0 auto;padding:24px;">
-          <div style="margin-bottom:22px;padding:22px;border-radius:16px;background:#5b67d6;color:#ffffff;">
-            <h1 style="margin:0;font-size:28px;color:#ffffff;">Daily Digest for #{CGI.escapeHTML(digest["profile_name"])} for #{now.strftime("%B %-d, %Y")}</h1>
+        <div class="digest-wrapper" style="max-width:720px;margin:0 auto;padding:24px;">
+          <div class="digest-header" style="margin-bottom:22px;padding:22px;border-radius:16px;background:#5b67d6;color:#ffffff;">
+            <h1 class="digest-title" style="margin:0;font-size:28px;line-height:1.25;color:#ffffff;">Daily Digest for #{CGI.escapeHTML(digest["profile_name"])} for #{now.strftime("%B %-d, %Y")}</h1>
           </div>
 
-          <div style="padding:20px;border-radius:16px;background:#f4f3ff;border:1px solid #d9d6fe;">
+          <div class="grade-snapshot" style="padding:20px;border-radius:16px;background:#f4f3ff;border:1px solid #d9d6fe;">
             <h2 style="margin:0 0 12px;font-size:20px;color:#5925dc;">Current Grade Snapshot</h2>
             <table role="presentation" style="width:100%;">#{grade_cards}</table>
           </div>

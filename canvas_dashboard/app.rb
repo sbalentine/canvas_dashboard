@@ -450,6 +450,27 @@ server.mount_proc "/backups" do |request, response|
   response.body = ""
 end
 
+server.mount_proc "/scheduled-emails/digest-preview" do |request, response|
+  unless %w[GET HEAD].include?(request.request_method)
+    response.status = 405
+    response["Allow"] = "GET, HEAD"
+    response.body = "Method not allowed"
+    next
+  end
+
+  now = Time.now
+  response.status = 200
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-store"
+  response.body = digest_html_body(digest_data(now: now), now)
+rescue => e
+  puts "Daily digest preview error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to generate the daily digest preview."
+end
+
 server.mount_proc "/scheduled-emails" do |request, response|
   email_error = nil
 

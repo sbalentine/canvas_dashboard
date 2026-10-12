@@ -64,6 +64,7 @@ class AppRoutesTest < Minitest::Test
     class_names = request("/class-names")
     grades = request("/grades")
     scheduled_emails = request("/scheduled-emails")
+    digest_preview = request("/scheduled-emails/digest-preview")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
@@ -75,6 +76,12 @@ class AppRoutesTest < Minitest::Test
     assert_includes grades.body, "Edit Assignment Grades"
     assert_equal "200", scheduled_emails.code
     assert_includes scheduled_emails.body, "Scheduled Emails"
+    assert_includes scheduled_emails.body, "Preview Daily Digest"
+    assert_equal "200", digest_preview.code
+    assert_equal "text/html; charset=utf-8", digest_preview["Content-Type"]
+    assert_equal "no-store", digest_preview["Cache-Control"]
+    assert_includes digest_preview.body, "Daily Digest for Avery"
+    assert_includes digest_preview.body, "Current Grade Snapshot"
   end
 
   def test_scheduled_email_route_saves_separate_recipients_and_preferences

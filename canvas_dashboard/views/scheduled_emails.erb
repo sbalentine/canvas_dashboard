@@ -133,15 +133,25 @@
           </span>
         </label>
 
-        <button
-          class="scheduled-email-send-button digest-now-button"
-          type="submit"
-          name="action"
-          value="send_digest"
-          <%= "disabled" unless gmail_configured %>
-        >
-          Send Daily Digest Now
-        </button>
+        <div class="scheduled-email-card-actions">
+          <a
+            class="digest-preview-link"
+            href="/scheduled-emails/digest-preview"
+            target="_blank"
+            rel="noopener"
+          >
+            Preview Daily Digest
+          </a>
+          <button
+            class="scheduled-email-send-button digest-now-button"
+            type="submit"
+            name="action"
+            value="send_digest"
+            <%= "disabled" unless gmail_configured %>
+          >
+            Send Daily Digest Now
+          </button>
+        </div>
       </section>
 
       <div class="settings-actions">

@@ -128,7 +128,7 @@ To enable email delivery:
 
 #### Daily digest
 
-The HTML daily digest prominently displays the complete current grade snapshot, followed by all missing work, assignments due today, assignments due tomorrow, and grades posted during the previous seven days sorted newest-first. It can be sent automatically at 6:00 AM local time or on demand with **Send Daily Digest Now**.
+The responsive HTML daily digest prominently displays the complete current grade snapshot, followed by all missing work, assignments due today, assignments due tomorrow, and grades posted during the previous seven days sorted newest-first. It can be previewed in the browser without sending an email, sent automatically at 6:00 AM local time, or sent on demand with **Send Daily Digest Now**.
 
 The Gmail fields are optional. The dashboard continues working normally when they are blank, but scheduled email delivery remains disabled.
 

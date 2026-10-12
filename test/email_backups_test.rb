@@ -180,6 +180,9 @@ class EmailBackupsTest < Minitest::Test
     assert_includes html, "Daily Digest for Avery for October 11, 2026"
     assert_includes text, "Daily Digest for Avery for October 11, 2026"
     assert_includes html, "Current Grade Snapshot"
+    assert_includes html, '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    assert_includes html, "@media only screen and (max-width: 600px)"
+    assert_includes html, 'class="grade-card-cell"'
     assert_includes html, "background:#ecfdf3"
     assert_includes html, "Missing Worksheet"
     assert_includes html, "Friday, October 9"

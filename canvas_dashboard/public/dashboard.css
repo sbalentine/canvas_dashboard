@@ -1666,6 +1666,36 @@ a:hover {
   cursor: not-allowed;
 }
 
+.scheduled-email-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.scheduled-email-card-actions .scheduled-email-send-button {
+  margin-top: 0;
+}
+
+.digest-preview-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 1px solid var(--purple);
+  border-radius: 6px;
+  color: var(--purple);
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.digest-preview-link:hover,
+.digest-preview-link:focus-visible {
+  background: #f4f3ff;
+}
+
 /* ==========================================================
    Manual Coursework Settings
    ========================================================== */
@@ -1893,6 +1923,16 @@ a:hover {
   }
 
   .settings-actions button {
+    width: 100%;
+  }
+
+  .scheduled-email-card-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scheduled-email-card-actions .scheduled-email-send-button,
+  .digest-preview-link {
     width: 100%;
   }
 
