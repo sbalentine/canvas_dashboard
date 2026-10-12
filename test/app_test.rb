@@ -148,7 +148,9 @@ class AppTest < Minitest::Test
     }
 
     template = ERB.new(File.read(File.join(APP_ROOT, "views", "dashboard.erb")))
-    html = template.result(binding)
+    html = with_replaced_method(self, :school_calendar_events, ->(**_kwargs) { [] }) do
+      template.result(binding)
+    end
 
     assert_includes html, "All clear"
     refute_includes html, "0 assignments"
