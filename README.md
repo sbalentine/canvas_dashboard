@@ -113,7 +113,7 @@ The **Scheduled Emails** page supports separate recipient lists and schedules fo
 
 #### Data backups
 
-Send an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Optionally enable delivery every day at 3:00 AM local time, or use **Email Backup Now**.
+Generate an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Use **Download Backup** to save it directly without email, optionally enable email delivery every day at 3:00 AM local time, or use **Email Backup Now**.
 
 Each message has the subject `School Dashboard Backup for {Current Date}` and contains only the ZIP attachment. The archive is discarded after Gmail accepts the message; no backup ZIP is retained on the system.
 

@@ -179,6 +179,10 @@ def build_backup_archive(now: Time.now)
   buffer.string
 end
 
+def backup_archive_filename(now)
+  "school-dashboard-backup-#{now.strftime("%Y-%m-%d-%H%M%S")}.zip"
+end
+
 def gmail_email_configuration
   sender = options["gmail_sender"].to_s.strip
   password = options["gmail_app_password"].to_s.gsub(/\s+/, "")
@@ -238,7 +242,7 @@ def send_school_dashboard_backup(recipients, now: Time.now)
   $email_send_mutex.synchronize do
     gmail = gmail_email_configuration
     archive = build_backup_archive(now: now)
-    filename = "school-dashboard-backup-#{now.strftime("%Y-%m-%d-%H%M%S")}.zip"
+    filename = backup_archive_filename(now)
     messages = recipients.map do |recipient|
       {
         recipient: recipient,

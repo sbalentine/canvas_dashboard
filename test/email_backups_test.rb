@@ -134,6 +134,15 @@ class EmailBackupsTest < Minitest::Test
     refute_includes message, "Content-Type: text/plain"
   end
 
+  def test_backup_archive_filename_uses_timestamp
+    now = Time.new(2026, 10, 11, 20, 8, 9, "-07:00")
+
+    assert_equal(
+      "school-dashboard-backup-2026-10-11-200809.zip",
+      backup_archive_filename(now)
+    )
+  end
+
   def test_backup_sends_separate_messages_to_multiple_recipients
     configure_gmail
     delivery = nil

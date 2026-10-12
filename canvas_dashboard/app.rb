@@ -471,6 +471,31 @@ rescue => e
   response.body = "Unable to generate the daily digest preview."
 end
 
+server.mount_proc "/scheduled-emails/backup-download" do |request, response|
+  unless %w[GET HEAD].include?(request.request_method)
+    response.status = 405
+    response["Allow"] = "GET, HEAD"
+    response.body = "Method not allowed"
+    next
+  end
+
+  now = Time.now
+  archive = build_backup_archive(now: now)
+  response.status = 200
+  response["Content-Type"] = "application/zip"
+  response["Content-Disposition"] =
+    "attachment; filename=\"#{backup_archive_filename(now)}\""
+  response["Content-Length"] = archive.bytesize.to_s
+  response["Cache-Control"] = "no-store"
+  response.body = archive
+rescue => e
+  puts "Backup download error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to generate the dashboard backup."
+end
+
 server.mount_proc "/scheduled-emails" do |request, response|
   email_error = nil
 

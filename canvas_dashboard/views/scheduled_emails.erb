@@ -92,15 +92,24 @@
           are never included.
         </p>
 
-        <button
-          class="scheduled-email-send-button backup-now-button"
-          type="submit"
-          name="action"
-          value="send_backup"
-          <%= "disabled" unless gmail_configured %>
-        >
-          Email Backup Now
-        </button>
+        <div class="scheduled-email-card-actions">
+          <a
+            class="scheduled-email-secondary-link"
+            href="/scheduled-emails/backup-download"
+            download
+          >
+            Download Backup
+          </a>
+          <button
+            class="scheduled-email-send-button backup-now-button"
+            type="submit"
+            name="action"
+            value="send_backup"
+            <%= "disabled" unless gmail_configured %>
+          >
+            Email Backup Now
+          </button>
+        </div>
       </section>
 
       <section class="card scheduled-email-card">
@@ -135,7 +144,7 @@
 
         <div class="scheduled-email-card-actions">
           <a
-            class="digest-preview-link"
+            class="scheduled-email-secondary-link"
             href="/scheduled-emails/digest-preview"
             target="_blank"
             rel="noopener"

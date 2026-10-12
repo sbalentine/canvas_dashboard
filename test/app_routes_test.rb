@@ -65,6 +65,7 @@ class AppRoutesTest < Minitest::Test
     grades = request("/grades")
     scheduled_emails = request("/scheduled-emails")
     digest_preview = request("/scheduled-emails/digest-preview")
+    backup_download = request("/scheduled-emails/backup-download")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
@@ -77,11 +78,20 @@ class AppRoutesTest < Minitest::Test
     assert_equal "200", scheduled_emails.code
     assert_includes scheduled_emails.body, "Scheduled Emails"
     assert_includes scheduled_emails.body, "Preview Daily Digest"
+    assert_includes scheduled_emails.body, "Download Backup"
     assert_equal "200", digest_preview.code
     assert_equal "text/html; charset=utf-8", digest_preview["Content-Type"]
     assert_equal "no-store", digest_preview["Cache-Control"]
     assert_includes digest_preview.body, "Daily Digest for Avery"
     assert_includes digest_preview.body, "Current Grade Snapshot"
+    assert_equal "200", backup_download.code
+    assert_equal "application/zip", backup_download["Content-Type"]
+    assert_match(
+      /\Aattachment; filename="school-dashboard-backup-\d{4}-\d{2}-\d{2}-\d{6}\.zip"\z/,
+      backup_download["Content-Disposition"]
+    )
+    assert_equal "no-store", backup_download["Cache-Control"]
+    assert_equal backup_download.body.bytesize.to_s, backup_download["Content-Length"]
   end
 
   def test_scheduled_email_route_saves_separate_recipients_and_preferences

@@ -1677,7 +1677,7 @@ a:hover {
   margin-top: 0;
 }
 
-.digest-preview-link {
+.scheduled-email-secondary-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1691,8 +1691,8 @@ a:hover {
   text-decoration: none;
 }
 
-.digest-preview-link:hover,
-.digest-preview-link:focus-visible {
+.scheduled-email-secondary-link:hover,
+.scheduled-email-secondary-link:focus-visible {
   background: #f4f3ff;
 }
 
@@ -1932,7 +1932,7 @@ a:hover {
   }
 
   .scheduled-email-card-actions .scheduled-email-send-button,
-  .digest-preview-link {
+  .scheduled-email-secondary-link {
     width: 100%;
   }
 
