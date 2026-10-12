@@ -3,6 +3,7 @@ ENV["CANVAS_URL"] = "https://temecula.instructure.com"
 ENV["PORT"] = "0"
 ENV["GMAIL_SENDER"] = ""
 ENV["GMAIL_APP_PASSWORD"] = ""
+ENV["CALENDAR_URL"] = ""
 
 require "minitest/autorun"
 require "tmpdir"
@@ -16,6 +17,7 @@ ENV["GRADE_OVERRIDES_FILE"] = File.join(TEST_TMP_DIR, "grade_overrides.json")
 ENV["MANUAL_COURSEWORK_FILE"] = File.join(TEST_TMP_DIR, "manual_coursework.json")
 ENV["HIDDEN_COURSES_FILE"] = File.join(TEST_TMP_DIR, "hidden_courses.json")
 ENV["BACKUP_SETTINGS_FILE"] = File.join(TEST_TMP_DIR, "backup_settings.json")
+ENV["SCHOOL_CALENDAR_FILE"] = File.join(TEST_TMP_DIR, "school_calendar.json")
 
 require_relative "../canvas_dashboard/app"
 

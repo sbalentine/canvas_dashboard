@@ -149,6 +149,12 @@
         assignment_due_time(event).getlocal.to_date == tomorrow
       end
 
+      calendar_enabled = !school_calendar_url.empty?
+      calendar = data["school_calendar"] || {}
+      calendar_events = calendar_enabled ? weekly_school_calendar_events(calendar, today: today) : []
+      calendar_today = school_calendar_events_on(calendar_events, today)
+      calendar_tomorrow = school_calendar_events_on(calendar_events, tomorrow)
+
       todo = (data["todo"] || []).sort_by do |item|
         assignment_due_time(item) || Time.at(Float::INFINITY)
       end
@@ -230,7 +236,7 @@
         <h2>Up next</h2>
 
         <p>
-          <% if due_today.zero? && due_tomorrow.zero? && missing.empty? %>
+          <% if due_today.zero? && due_tomorrow.zero? && missing.empty? && calendar_today.empty? && calendar_tomorrow.empty? %>
             All clear 🎉
           <% else %>
             <span class="up-next-items">
@@ -249,6 +255,14 @@
               <% unless missing.empty? %>
                 <strong><%= missing.length %> missing</strong>
               <% end %>
+
+              <% unless calendar_today.empty? %>
+                <span><%= calendar_today.length %> calendar <%= calendar_today.length == 1 ? "event" : "events" %> today</span>
+              <% end %>
+
+              <% unless calendar_tomorrow.empty? %>
+                <span><%= calendar_tomorrow.length %> calendar <%= calendar_tomorrow.length == 1 ? "event" : "events" %> tomorrow</span>
+              <% end %>
             </span>
           <% end %>
         </p>
@@ -264,6 +278,69 @@
         </button>
       </form>
     </section>
+
+    <% if calendar_enabled %>
+      <section class="section" id="school-calendar" aria-label="School calendar">
+        <div class="section-header">
+          <h2>🗓 School Calendar</h2>
+          <div class="section-note">Next 7 days · Updated daily</div>
+        </div>
+
+        <div class="card">
+          <% if calendar["error"] %>
+            <p role="status">
+              <%= h calendar["error"] %>
+              <% if calendar["updated_at"] %>
+                Showing cached events from <%= h grade_date(calendar["updated_at"]) %>.
+              <% end %>
+            </p>
+          <% elsif !calendar["updated_at"] %>
+            <p role="status">Waiting for the first calendar update.</p>
+          <% end %>
+
+          <% (today...(today + 7)).each do |date| %>
+            <% day_events = school_calendar_events_on(calendar_events, date) %>
+            <% next if day_events.empty? && date > tomorrow %>
+            <div class="day-group">
+              <div class="day-heading">
+                <%= h(date == today ? "Today" : date == tomorrow ? "Tomorrow" : date.strftime("%A, %B %-d")) %>
+              </div>
+              <% if day_events.empty? %>
+                <p class="assignment-course">
+                  <%= calendar["updated_at"] ? "No calendar events." : "Calendar events unavailable." %>
+                </p>
+              <% end %>
+              <% day_events.each do |event| %>
+                <div class="upcoming-row">
+                  <div class="submission-icon" aria-hidden="true">🗓</div>
+                  <div class="assignment-main">
+                    <div class="assignment-title">
+                      <% if event["url"] %>
+                        <a href="<%= h event["url"] %>" target="_blank" rel="noopener noreferrer"><%= h event["title"] %></a>
+                      <% else %>
+                        <%= h event["title"] %>
+                      <% end %>
+                    </div>
+                    <% unless event["location"].to_s.empty? %>
+                      <div class="assignment-course"><%= h event["location"] %></div>
+                    <% end %>
+                  </div>
+                  <div class="assignment-due">
+                    <% if event["all_day"] %>
+                      All day
+                    <% elsif event["start_date"] < date.iso8601 %>
+                      Continues
+                    <% else %>
+                      <%= h due_time_label(Time.iso8601(event["start_at"])) %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      </section>
+    <% end %>
 
     <!-- =====================================================
          Canvas Status

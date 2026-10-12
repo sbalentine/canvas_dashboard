@@ -2,7 +2,18 @@ GEM
   remote: https://rubygems.org/
   specs:
     base64 (0.3.0)
+    concurrent-ruby (1.3.8)
     drb (2.2.3)
+    icalendar (2.13.0)
+      base64
+      ice_cube (~> 0.16)
+      logger
+    icalendar-recurrence (1.2.1)
+      icalendar (~> 2.0)
+      ice_cube (~> 0.16)
+      tzinfo (~> 2.0)
+    ice_cube (0.17.0)
+    logger (1.7.0)
     minitest (6.0.6)
       drb (~> 2.0)
       prism (~> 1.5)
@@ -10,31 +21,54 @@ GEM
       timeout
     net-smtp (0.5.2)
       net-protocol
+    nokogiri (1.19.4-aarch64-linux-musl)
+      racc (~> 1.4)
+    nokogiri (1.19.4-arm64-darwin)
+      racc (~> 1.4)
+    nokogiri (1.19.4-x86_64-linux-gnu)
+      racc (~> 1.4)
     prism (1.9.0)
+    racc (1.8.1)
     rubyzip (3.7.0)
     timeout (0.6.1)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
     webrick (1.9.2)
 
 PLATFORMS
+  aarch64-linux-musl
   arm64-darwin-25
-  ruby
+  x86_64-linux-gnu
 
 DEPENDENCIES
   base64 (~> 0.3)
+  icalendar (~> 2.13)
+  icalendar-recurrence (~> 1.2)
   minitest (~> 6.0)
   net-smtp (~> 0.5)
+  nokogiri (~> 1.19)
   rubyzip (~> 3.2)
   webrick (~> 1.9)
 
 CHECKSUMS
   base64 (0.3.0) sha256=27337aeabad6ffae05c265c450490628ef3ebd4b67be58257393227588f5a97b
+  concurrent-ruby (1.3.8) sha256=b2f1be836e968ccc78ccfce277ea79c72a88633f22306782c16ff23fb415d1e1
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373
+  icalendar (2.13.0) sha256=dbfad06c1db3e85f20fa66271fb6b500e5a8915b20f3fb84e5389659e23cf1da
+  icalendar-recurrence (1.2.1) sha256=c739971314a9a172993c84a0df82b3c7c77e2714f848c1b3fa303dff5ae4bc22
+  ice_cube (0.17.0) sha256=32deb45dda4b4acc53505c2f581f6d32b5afc04d29b9004769944a0df5a5fcbe
+  logger (1.7.0) sha256=196edec7cc44b66cfb40f9755ce11b392f21f7967696af15d274dde7edff0203
   minitest (6.0.6) sha256=153ea36d1d987a62942382b61075745042a2b3123b1cd48f4c3675af9cc7d6f1
   net-protocol (0.4.0) sha256=f9f90c8c6f64794a45160bf422177a336db12809de3beeeaa26b88fcd2e8c853
   net-smtp (0.5.2) sha256=35103cc04d6b2d94632f9928ede07483c24b70b9c0db1f231fea43909b678f3c
+  nokogiri (1.19.4-aarch64-linux-musl) sha256=35c65b9ce72b3bb03207bdbe7067915019dc18c1b9b59139684bd6690fdd01af
+  nokogiri (1.19.4-arm64-darwin) sha256=a46db9853286e6597b36ebc6953817d15acf3a299583eb3f89fdc6f91dd63527
+  nokogiri (1.19.4-x86_64-linux-gnu) sha256=379fae440b28915e3f19d752ce2dcf8465ed2b2fbefd2a7ca0dd497bc981a06a
   prism (1.9.0) sha256=7b530c6a9f92c24300014919c9dcbc055bf4cdf51ec30aed099b06cd6674ef85
+  racc (1.8.1) sha256=4a7f6929691dbec8b5209a0b373bc2614882b55fc5d2e447a21aaa691303d62f
   rubyzip (3.7.0) sha256=65c19294da75297a939006f3516deacc33185fbd721ff1954f7a231db6d3e121
   timeout (0.6.1) sha256=78f57368a7e7bbadec56971f78a3f5ecbcfb59b7fcbb0a3ed6ddc08a5094accb
+  tzinfo (2.0.6) sha256=8daf828cc77bcf7d63b0e3bdb6caa47e2272dcfaf4fbfe46f8c3a9df087a829b
   webrick (1.9.2) sha256=beb4a15fc474defed24a3bda4ffd88a490d517c9e4e6118c3edce59e45864131
 
 BUNDLED WITH

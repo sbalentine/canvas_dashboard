@@ -198,6 +198,7 @@ end
 
 def refresh_dashboard
   $refresh_mutex.synchronize do
+    refresh_school_calendar
     previous_data = dashboard_data
     data = fetch_dashboard_data
     removed_grade_overrides = reconcile_canvas_grade_overrides(data)

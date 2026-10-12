@@ -13,6 +13,7 @@ require_relative "lib/hidden_courses"
 require_relative "lib/manual_coursework"
 require_relative "lib/event_journal"
 require_relative "lib/home_assistant_events"
+require_relative "lib/school_calendar"
 require_relative "lib/dashboard_data"
 require_relative "lib/email_backups"
 
@@ -88,6 +89,8 @@ server.mount_proc "/" do |_request, response|
 
       next
     end
+
+    data = data.merge("school_calendar" => school_calendar_data)
 
     template = ERB.new(
       File.read(

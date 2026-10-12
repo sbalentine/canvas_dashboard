@@ -83,6 +83,14 @@ Use **Manual Classes & Assignments** from the dashboard to track coursework that
 
 Incomplete future assignments appear in **Upcoming Assignments** and incomplete overdue assignments appear in **Missing Assignments**. Manual coursework is stored in `/data/manual_coursework.json` for the Home Assistant add-on or `tmp/manual_coursework.json` locally, so Canvas refreshes do not overwrite it.
 
+### 🗓 School Calendar
+
+Set the optional Home Assistant `calendar_url` option to a public HTTPS iCalendar (`.ics`) subscription feed or a calendar page that advertises one. Pages containing structured event data are also supported. **School Calendar** displays the next seven calendar days, including **Today** and **Tomorrow**, with all-day events, event times, and locations. School events remain separate from assignment completion and missing-work counts.
+
+For a page such as `https://www.tvusd.k12.ca.us/view-full-calendar#`, try the page URL first. If no feed is found, use the site's **Subscribe / iCal** link instead. JavaScript-only calendar pages without an advertised feed or embedded event data cannot be imported automatically.
+
+Calendar events are cached in `/data/school_calendar.json` in Home Assistant or `canvas_dashboard/tmp/school_calendar.json` locally. The source is checked at most once per local calendar day, including across restarts. Dashboard reloads and manual Canvas refreshes reuse that day's cache. A failed daily check retains existing events and is retried the next day. Changing the URL starts a new cache; clearing it disables calendar display. Day boundaries and timed events use the application's local timezone.
+
 ### 📊 Grade Summary
 
 Calculates a current grade for each course from graded assignments returned by the Canvas API.
@@ -311,6 +319,7 @@ Create a `.env` file in the project root:
 CANVAS_URL='https://your-school.instructure.com'
 CANVAS_TOKEN='your-canvas-token'
 TOKEN_EXPIRES='YYYY-MM-DD'
+CALENDAR_URL='' # Optional public calendar page or HTTPS .ics feed
 ```
 
 For example:
@@ -398,7 +407,7 @@ Example:
 ```yaml
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.15.0"
+version: "0.16.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
@@ -419,6 +428,7 @@ options:
   canvas_url: ""
   canvas_token: ""
   token_expires: ""
+  calendar_url: ""
   gmail_sender: ""
   gmail_app_password: ""
 
@@ -426,11 +436,12 @@ schema:
   canvas_url: str
   canvas_token: password
   token_expires: str
+  calendar_url: str?
   gmail_sender: str
   gmail_app_password: password
 ```
 
-Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The Gmail sender and app password are optional and only required for scheduled emails.
+Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The calendar URL is optional. The Gmail sender and app password are optional and only required for scheduled emails.
 
 The token is provided to the application through Home Assistant's `/data/options.json` and does **not** need to be stored in the Git repository.
 
@@ -479,6 +490,7 @@ Expected options:
   "canvas_url": "https://your-school.instructure.com",
   "canvas_token": "...",
   "token_expires": "YYYY-MM-DD",
+  "calendar_url": "",
   "gmail_sender": "sender@gmail.com",
   "gmail_app_password": "..."
 }
@@ -492,6 +504,7 @@ Local development uses environment variables:
 CANVAS_URL
 CANVAS_TOKEN
 TOKEN_EXPIRES
+CALENDAR_URL
 GMAIL_SENDER
 GMAIL_APP_PASSWORD
 ```

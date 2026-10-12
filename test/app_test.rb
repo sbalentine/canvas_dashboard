@@ -154,6 +154,119 @@ class AppTest < Minitest::Test
     refute_includes html, "No missing work"
   end
 
+  def calendar_dashboard_data(events, overrides = {})
+    {
+      "profile" => { "short_name" => "Avery" },
+      "courses" => [],
+      "course_names" => {},
+      "missing" => [],
+      "upcoming" => [],
+      "todo" => [],
+      "grades" => [],
+      "submissions" => {},
+      "school_calendar" => {
+        "events" => events,
+        "updated_at" => Time.now.iso8601
+      }.merge(overrides)
+    }
+  end
+
+  def calendar_event(title, date, overrides = {})
+    {
+      "title" => title,
+      "start_at" => date.iso8601,
+      "end_at" => (date + 1).iso8601,
+      "start_date" => date.iso8601,
+      "end_date" => (date + 1).iso8601,
+      "all_day" => true,
+      "location" => ""
+    }.merge(overrides)
+  end
+
+  def render_calendar_dashboard(data, url: "https://school.example/calendar.ics")
+    template = ERB.new(File.read(File.join(APP_ROOT, "views", "dashboard.erb")))
+    with_replaced_method(self, :school_calendar_url, -> { url }) do
+      template.result(binding)
+    end
+  end
+
+  def test_calendar_shows_today_tomorrow_and_week_without_assignment_counts
+    today = Date.today
+    data = calendar_dashboard_data([
+      calendar_event("School <Holiday>", today, "location" => "Hall & Gym"),
+      calendar_event("Assembly", today + 1, "url" => "https://school.example/events/assembly"),
+      calendar_event("Spirit day", today + 6),
+      calendar_event("Outside this week", today + 7)
+    ])
+
+    html = render_calendar_dashboard(data)
+
+    assert_includes html, "School Calendar"
+    assert_includes html, "Today"
+    assert_includes html, "Tomorrow"
+    assert_includes html, "School &lt;Holiday&gt;"
+    assert_includes html, "Hall &amp; Gym"
+    assert_includes html, "Assembly"
+    assert_includes html, "Spirit day"
+    assert_includes html, "All day"
+    assert_includes html, "1 calendar event today"
+    assert_includes html, "1 calendar event tomorrow"
+    assert_includes html, 'rel="noopener noreferrer"'
+    refute_includes html, "Outside this week"
+    refute_includes html, "All clear"
+    refute_includes html, "left today"
+    refute_includes html, "due tomorrow"
+    refute_includes html, "School <Holiday>"
+  end
+
+  def test_calendar_includes_earlier_today_and_multiday_events
+    today = Date.today
+    early = Time.local(today.year, today.month, today.day, 0, 1)
+    data = calendar_dashboard_data([
+      calendar_event("Early meeting", today, {
+        "start_at" => early.iso8601,
+        "end_at" => (early + 3600).iso8601,
+        "all_day" => false
+      }),
+      calendar_event("School break", today - 1, {
+        "end_at" => (today + 2).iso8601,
+        "end_date" => (today + 2).iso8601
+      })
+    ])
+
+    html = render_calendar_dashboard(data)
+
+    assert_includes html, "Early meeting"
+    assert_includes html, "12:01 AM"
+    assert_equal 2, html.scan("School break").length
+    assert_includes html, "2 calendar events today"
+    assert_includes html, "1 calendar event tomorrow"
+  end
+
+  def test_calendar_reports_cached_failure_and_empty_days
+    data = calendar_dashboard_data([], "error" => "Calendar <unavailable>.")
+    html = render_calendar_dashboard(data)
+
+    assert_includes html, "Calendar &lt;unavailable&gt;."
+    assert_includes html, "Showing cached events"
+    assert_equal 2, html.scan("No calendar events.").length
+    assert_includes html, "All clear"
+
+    data["school_calendar"].delete("updated_at")
+    html = render_calendar_dashboard(data)
+    assert_equal 2, html.scan("Calendar events unavailable.").length
+    refute_includes html, "No calendar events."
+  end
+
+  def test_blank_calendar_configuration_hides_cached_events
+    data = calendar_dashboard_data([calendar_event("Old calendar", Date.today)])
+    html = render_calendar_dashboard(data, url: "")
+
+    refute_includes html, "School Calendar"
+    refute_includes html, "Old calendar"
+    assert_includes html, "All clear"
+  end
+
   def test_grade_editor_sorts_canvas_assignments_newest_first
     data = {
       "courses" => [{ "id" => 1, "name" => "Math" }],

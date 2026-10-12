@@ -49,6 +49,20 @@ class CanvasTest < Minitest::Test
       JSON.generate("canvas_url" => "https://ha.instructure.com")
     end
 
+    def test_calendar_url_uses_environment_or_home_assistant_options
+      ENV["CALENDAR_URL"] = "https://school.example/calendar.ics"
+      assert_equal ENV["CALENDAR_URL"], options["calendar_url"]
+
+      options_path = "/data/options.json"
+      with_replaced_method(File, :exist?, ->(path) { path == options_path }) do
+        with_replaced_method(File, :read, ->(_) { JSON.generate("calendar_url" => "https://district.example/calendar") }) do
+          assert_equal "https://district.example/calendar", options["calendar_url"]
+        end
+      end
+    ensure
+      ENV["CALENDAR_URL"] = ""
+    end
+
     result = with_replaced_method(File, :exist?, exist) do
       with_replaced_method(File, :read, read) { load_base_url }
     end

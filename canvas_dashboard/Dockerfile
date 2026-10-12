@@ -6,7 +6,10 @@ RUN apk add --no-cache \
     gem install --no-document \
       base64:0.3.0 \
       net-smtp:0.5.2 \
-      rubyzip:3.7.0
+      rubyzip:3.7.0 \
+      icalendar:2.13.0 \
+      icalendar-recurrence:1.2.1 \
+      nokogiri:1.19.4
 
 WORKDIR /app
 
