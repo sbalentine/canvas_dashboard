@@ -116,19 +116,23 @@ module SchoolCalendar
     content_type = nil
     Timeout.timeout(20) do
       http.request(Net::HTTP::Get.new(uri.request_uri, "Accept" => "text/calendar, text/html")) do |response|
+        raise InvalidSource if response["content-length"].to_i > MAX_BYTES
+
         if response.is_a?(Net::HTTPRedirection)
           raise InvalidSource if redirects.zero? || response["location"].to_s.empty?
 
           redirect = URI.join(uri.to_s, response["location"]).to_s
         else
           raise InvalidSource unless response.is_a?(Net::HTTPSuccess)
-          raise InvalidSource if response["content-length"].to_i > MAX_BYTES
 
           content_type = response["content-type"].to_s
-          response.read_body do |chunk|
-            body << chunk
-            raise InvalidSource if body.bytesize > MAX_BYTES
-          end
+        end
+        bytes = 0
+        response.read_body do |chunk|
+          bytes += chunk.bytesize
+          raise InvalidSource if bytes > MAX_BYTES
+
+          body << chunk unless redirect
         end
       end
     end

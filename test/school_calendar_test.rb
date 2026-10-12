@@ -317,6 +317,7 @@ class SchoolCalendarTest < Minitest::Test
       raise "Canvas credentials leaked" if request["Authorization"]
       response = Net::HTTPFound.new("1.1", "302", "Found")
       response["location"] = "https://127.0.0.1/internal"
+      response.define_singleton_method(:read_body) {}
       block.call(response)
     end
     with_replaced_method(Net::HTTP, :new, lambda { |host, port, proxy|
@@ -343,6 +344,7 @@ class SchoolCalendarTest < Minitest::Test
   def test_redirect_count_is_bounded
     response = Net::HTTPFound.new("1.1", "302", "Found")
     response["location"] = "/calendar.ics"
+    response.define_singleton_method(:read_body) {}
     requests = 0
     with_replaced_method(Net::HTTP, :new, lambda { |*_args|
       requests += 1
@@ -353,6 +355,38 @@ class SchoolCalendarTest < Minitest::Test
       end
     end
     assert_equal 4, requests
+  end
+
+  def test_oversized_redirect_body_is_bounded_before_following_redirect
+    [false, true].each do |declared_size|
+      response = Net::HTTPFound.new("1.1", "302", "Found")
+      response["location"] = "https://other.example/calendar.ics"
+      response["content-length"] = (SchoolCalendar::MAX_BYTES + 1).to_s if declared_size
+      chunks_read = 0
+      response.define_singleton_method(:read_body) do |&block|
+        chunk = "a" * 65_536
+        100.times do
+          chunks_read += 1
+          block.call(chunk)
+        end
+      end
+      requests = 0
+      resolved_hosts = []
+      with_replaced_method(Net::HTTP, :new, lambda { |*_args|
+        requests += 1
+        fake_http(response)
+      }) do
+        with_replaced_method(SchoolCalendar, :resolve, lambda { |host|
+          resolved_hosts << host
+          ["8.8.8.8"]
+        }) do
+          assert_raises(SchoolCalendar::InvalidSource) { SchoolCalendar.fetch(SOURCE) }
+        end
+      end
+      assert_equal 1, requests
+      assert_equal ["school.example"], resolved_hosts
+      assert_equal declared_size ? 0 : 81, chunks_read
+    end
   end
 
   def test_response_size_is_bounded_even_without_content_length
