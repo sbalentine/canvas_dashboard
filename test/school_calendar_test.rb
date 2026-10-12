@@ -6,6 +6,11 @@ class SchoolCalendarTest < Minitest::Test
     $school_calendar_cache = nil
   end
 
+  def teardown
+    FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
+    $school_calendar_cache = nil
+  end
+
   def calendar_body
     <<~ICS
       BEGIN:VCALENDAR

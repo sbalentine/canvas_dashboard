@@ -5,6 +5,8 @@ class AppTest < Minitest::Test
 
   def setup
     FileUtils.rm_f(GRADE_OVERRIDES_FILE)
+    FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
+    $school_calendar_cache = nil
   end
 
   def test_todo_form_fields_normalize_valid_input
