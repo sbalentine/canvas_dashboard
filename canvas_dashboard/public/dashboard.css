@@ -1545,12 +1545,21 @@ a:hover {
    Email Backup Settings
    ========================================================== */
 
-.backup-settings-form {
-  display: grid;
-  gap: 20px;
+.scheduled-email-settings-page {
+  max-width: 920px;
 }
 
-.backup-settings-form > label > span {
+.scheduled-email-settings {
+  display: grid;
+  gap: 16px;
+}
+
+.scheduled-email-card h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.scheduled-email-card > label > span {
   display: block;
   margin-bottom: 6px;
   color: var(--muted);
@@ -1558,21 +1567,30 @@ a:hover {
   font-weight: 700;
 }
 
-.backup-settings-form input[type="email"] {
+.scheduled-email-card textarea {
   width: 100%;
-  min-height: 42px;
   padding: 9px 11px;
   border: 1px solid #d0d5dd;
   border-radius: 6px;
   background: white;
   color: var(--text);
   font: inherit;
+  line-height: 1.5;
+  resize: vertical;
 }
 
-.backup-settings-form .backup-daily-field {
+.scheduled-email-card > label > small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.scheduled-email-card .backup-daily-field {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  margin-top: 18px;
 }
 
 .backup-daily-field input {
@@ -1625,6 +1643,25 @@ a:hover {
 }
 
 .settings-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scheduled-email-send-button {
+  min-height: 42px;
+  margin-top: 18px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--success);
+  color: white;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.scheduled-email-send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#5b67d6">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Scheduled Emails</title>
+</head>
+
+<body>
+  <main class="container settings-page scheduled-email-settings-page">
+    <header class="settings-header">
+      <div>
+        <h1>Scheduled Emails</h1>
+        <div class="subtitle">
+          Configure data backups and daily school summaries.
+        </div>
+      </div>
+
+      <a href="/">Back to Dashboard</a>
+    </header>
+
+    <% if email_error %>
+      <div class="backup-message error" role="alert">
+        <strong>Email not sent.</strong>
+        <%= h email_error %>
+      </div>
+    <% elsif request.query["sent"] == "backup" %>
+      <div class="backup-message success" role="status">
+        <strong>Backup sent.</strong>
+        Check each configured backup inbox.
+      </div>
+    <% elsif request.query["sent"] == "digest" %>
+      <div class="backup-message success" role="status">
+        <strong>Daily digest sent.</strong>
+        Check each configured digest inbox.
+      </div>
+    <% elsif request.query["saved"] == "1" %>
+      <div class="backup-message success" role="status">
+        <strong>Scheduled email settings saved.</strong>
+      </div>
+    <% end %>
+
+    <% unless gmail_configured %>
+      <div class="backup-message warning" role="status">
+        <strong>Gmail is not configured.</strong>
+        Add the Gmail sender and app password in the Home Assistant add-on settings,
+        then restart the add-on.
+      </div>
+    <% end %>
+
+    <form class="scheduled-email-settings" method="post" action="/scheduled-emails">
+      <section class="card scheduled-email-card">
+        <h2>Data Backup</h2>
+        <p class="settings-intro">
+          Sends an in-memory ZIP of Canvas data and dashboard edits. No backup file is retained.
+        </p>
+
+        <label>
+          <span>Backup recipients</span>
+          <textarea
+            name="backup_recipients"
+            rows="3"
+            placeholder="One email address per line"
+          ><%= h settings["backup_recipients"].join("\n") %></textarea>
+          <small>Enter one or more addresses separated by a new line or comma.</small>
+        </label>
+
+        <label class="backup-daily-field">
+          <input
+            type="checkbox"
+            name="backup_daily_enabled"
+            value="true"
+            <%= "checked" if settings["backup_daily_enabled"] %>
+          >
+          <span>
+            <strong>Send every day at 3:00 AM</strong>
+            <small>Uses the Raspberry Pi's local time.</small>
+          </span>
+        </label>
+
+        <p class="settings-help">
+          Includes the Canvas cache, manual coursework, grade edits, class settings,
+          hidden classes, activity history, and scheduled email preferences. Credentials
+          are never included.
+        </p>
+
+        <button
+          class="scheduled-email-send-button backup-now-button"
+          type="submit"
+          name="action"
+          value="send_backup"
+          <%= "disabled" unless gmail_configured %>
+        >
+          Email Backup Now
+        </button>
+      </section>
+
+      <section class="card scheduled-email-card">
+        <h2>Daily Digest</h2>
+        <p class="settings-intro">
+          Sends the current grade snapshot, all missing work, assignments due today and
+          tomorrow, and grades posted during the last seven days.
+        </p>
+
+        <label>
+          <span>Digest recipients</span>
+          <textarea
+            name="digest_recipients"
+            rows="3"
+            placeholder="One email address per line"
+          ><%= h settings["digest_recipients"].join("\n") %></textarea>
+          <small>Each recipient receives a separate email.</small>
+        </label>
+
+        <label class="backup-daily-field">
+          <input
+            type="checkbox"
+            name="digest_daily_enabled"
+            value="true"
+            <%= "checked" if settings["digest_daily_enabled"] %>
+          >
+          <span>
+            <strong>Send every day at 6:00 AM</strong>
+            <small>Uses the Raspberry Pi's local time.</small>
+          </span>
+        </label>
+
+        <button
+          class="scheduled-email-send-button digest-now-button"
+          type="submit"
+          name="action"
+          value="send_digest"
+          <%= "disabled" unless gmail_configured %>
+        >
+          Send Daily Digest Now
+        </button>
+      </section>
+
+      <div class="settings-actions">
+        <a href="/">Cancel</a>
+        <button type="submit" name="action" value="save">
+          Save Scheduled Emails
+        </button>
+      </div>
+    </form>
+  </main>
+</body>
+</html>

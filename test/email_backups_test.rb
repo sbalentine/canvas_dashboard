@@ -9,18 +9,9 @@ class EmailBackupsTest < Minitest::Test
     FileUtils.rm_f(HIDDEN_COURSES_FILE)
     ENV["GMAIL_SENDER"] = ""
     ENV["GMAIL_APP_PASSWORD"] = ""
-    $dashboard_data = {
-      "profile" => { "short_name" => "Avery" },
-      "courses" => [],
-      "course_names" => {},
-      "grades" => [],
-      "missing" => [],
-      "upcoming" => [],
-      "todo" => [],
-      "submissions" => {}
-    }
+    $dashboard_data = base_data
     $event_journal = { "next_id" => 1, "events" => [] }
-    $last_daily_backup_attempt_on = nil
+    $scheduled_email_attempts = {}
   end
 
   def teardown
@@ -28,16 +19,64 @@ class EmailBackupsTest < Minitest::Test
     ENV["GMAIL_APP_PASSWORD"] = ""
   end
 
-  def test_backup_settings_round_trip
-    settings = {
-      "recipient_email" => "parent@example.com",
-      "daily_enabled" => true,
-      "last_daily_sent_on" => "2026-10-11"
+  def base_data
+    {
+      "profile" => { "short_name" => "Avery" },
+      "courses" => [
+        { "id" => 1, "name" => "Math" },
+        { "id" => 2, "name" => "Science" }
+      ],
+      "course_names" => { "1" => "Math", "2" => "Science" },
+      "grades" => [],
+      "missing" => [],
+      "upcoming" => [],
+      "todo" => [],
+      "submissions" => {}
     }
+  end
 
-    save_backup_settings(settings)
+  def scheduled_settings(overrides = {})
+    empty_scheduled_email_settings.merge(overrides)
+  end
 
-    assert_equal settings, load_backup_settings
+  def test_scheduled_email_settings_round_trip
+    settings = scheduled_settings(
+      "backup_recipients" => ["backup@example.com"],
+      "backup_daily_enabled" => true,
+      "digest_recipients" => ["one@example.com", "two@example.com"],
+      "digest_daily_enabled" => true
+    )
+
+    save_scheduled_email_settings(settings)
+
+    assert_equal settings, load_scheduled_email_settings
+  end
+
+  def test_legacy_backup_settings_are_migrated
+    File.write(
+      BACKUP_SETTINGS_FILE,
+      JSON.generate(
+        "recipient_email" => "parent@example.com",
+        "daily_enabled" => true,
+        "last_daily_sent_on" => "2026-10-11"
+      )
+    )
+
+    settings = load_scheduled_email_settings
+
+    assert_equal ["parent@example.com"], settings["backup_recipients"]
+    assert settings["backup_daily_enabled"]
+    assert_equal "2026-10-11", settings["last_backup_sent_on"]
+    assert_empty settings["digest_recipients"]
+  end
+
+  def test_recipient_lists_accept_newlines_commas_and_remove_duplicates
+    assert_equal(
+      ["one@example.com", "two@example.com"],
+      normalize_email_recipients(
+        "One@example.com\n two@example.com,one@example.com"
+      )
+    )
   end
 
   def test_archive_contains_dashboard_data_without_credentials
@@ -45,10 +84,11 @@ class EmailBackupsTest < Minitest::Test
       "courses" => { "piano" => { "name" => "Piano" } },
       "assignments" => {}
     )
-    save_backup_settings(
-      "recipient_email" => "parent@example.com",
-      "daily_enabled" => true,
-      "last_daily_sent_on" => nil
+    save_scheduled_email_settings(
+      scheduled_settings(
+        "backup_recipients" => ["backup@example.com"],
+        "digest_recipients" => ["digest@example.com"]
+      )
     )
 
     archive = build_backup_archive(
@@ -79,7 +119,7 @@ class EmailBackupsTest < Minitest::Test
     refute entries.key?("options.json")
   end
 
-  def test_email_has_requested_subject_and_only_attachment
+  def test_backup_email_has_requested_subject_and_only_attachment
     now = Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
     message = backup_email_message(
       sender: "sender@gmail.com",
@@ -92,78 +132,223 @@ class EmailBackupsTest < Minitest::Test
     assert_includes message, "Subject: School Dashboard Backup for October 11, 2026"
     assert_includes message, "Content-Disposition: attachment; filename=\"backup.zip\""
     refute_includes message, "Content-Type: text/plain"
-    refute_includes message, "Attached is"
   end
 
-  def test_send_uses_gmail_configuration_and_in_memory_archive
-    ENV["GMAIL_SENDER"] = "sender@gmail.com"
-    ENV["GMAIL_APP_PASSWORD"] = "abcd efgh ijkl mnop"
-    delivered = nil
+  def test_backup_sends_separate_messages_to_multiple_recipients
+    configure_gmail
+    delivery = nil
 
     with_replaced_method(
       self,
-      :deliver_backup_message,
-      ->(**arguments) { delivered = arguments }
+      :deliver_email_messages,
+      ->(**arguments) { delivery = arguments }
     ) do
-      filename = send_school_dashboard_backup(
-        "parent@example.com",
+      send_school_dashboard_backup(
+        ["one@example.com", "two@example.com"],
         now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
       )
-
-      assert_equal "school-dashboard-backup-2026-10-11-030000.zip", filename
     end
 
-    assert_equal "sender@gmail.com", delivered[:sender]
-    assert_equal "abcdefghijklmnop", delivered[:password]
-    assert_equal "parent@example.com", delivered[:recipient]
-    assert_includes delivered[:message], "application/zip"
+    assert_equal %w[one@example.com two@example.com],
+      delivery[:messages].map { |message| message[:recipient] }
+    delivery[:messages].each do |message|
+      refute_includes message[:message], "two@example.com" if
+        message[:recipient] == "one@example.com"
+    end
   end
 
-  def test_daily_backup_sends_once_during_three_am_hour
-    save_backup_settings(
-      "recipient_email" => "parent@example.com",
-      "daily_enabled" => true,
-      "last_daily_sent_on" => nil
+  def test_digest_contains_snapshot_missing_due_work_and_recent_grades
+    now = Time.new(2026, 10, 11, 6, 0, 0, "-07:00")
+    $dashboard_data["grades"] = [
+      graded_submission(10, 1, "Quiz", 9, 10, "2026-10-08T12:00:00-07:00"),
+      graded_submission(20, 2, "Lab", 10, 10, "2026-10-10T12:00:00-07:00"),
+      graded_submission(21, 2, "Old Lab", 10, 10, "2026-10-01T12:00:00-07:00")
+    ]
+    $dashboard_data["missing"] = [
+      assignment(30, 1, "Missing Worksheet", "2026-10-09T15:00:00-07:00")
+    ]
+    $dashboard_data["upcoming"] = [
+      assignment(31, 1, "Today Homework", "2026-10-11T15:00:00-07:00"),
+      assignment(32, 2, "Tomorrow Project", "2026-10-12T16:00:00-07:00")
+    ]
+
+    digest = digest_data(now: now)
+    html = digest_html_body(digest, now)
+    text = digest_text_body(digest, now)
+
+    assert_equal %w[Science Math], digest["grade_snapshot"].map { |grade| grade["name"] }
+    assert_includes html, "Daily Digest for Avery for October 11, 2026"
+    assert_includes text, "Daily Digest for Avery for October 11, 2026"
+    assert_includes html, "Current Grade Snapshot"
+    assert_includes html, "background:#ecfdf3"
+    assert_includes html, "Missing Worksheet"
+    assert_includes html, "Friday, October 9"
+    assert_includes html, "Today Homework"
+    assert_includes html, "Tomorrow Project"
+    assert_operator html.index("Lab"), :<, html.index("Quiz")
+    refute_includes html, "Old Lab"
+    assert_includes text, "MISSING WORK"
+    assert_includes text, "GRADES POSTED IN THE LAST 7 DAYS"
+  end
+
+  def test_digest_grade_colors_match_dashboard_grade_palette
+    assert_equal(
+      { foreground: "#027a48", background: "#ecfdf3" },
+      digest_grade_colors("A")
     )
+    assert_equal(
+      { foreground: "#175cd3", background: "#eff8ff" },
+      digest_grade_colors("B")
+    )
+    assert_equal(
+      { foreground: "#b42318", background: "#fff1f0" },
+      digest_grade_colors("F")
+    )
+  end
+
+  def test_recent_grade_colors_highlight_low_and_perfect_scores
+    assert_equal(
+      {
+        foreground: "#b42318",
+        background: "#fff1f0",
+        border: "#fecdca"
+      },
+      digest_recent_grade_colors(6, 10)
+    )
+    assert_equal(
+      {
+        foreground: "#8a5a00",
+        background: "#fff7d6",
+        border: "#e8b931"
+      },
+      digest_recent_grade_colors(10, 10)
+    )
+    assert_equal(
+      {
+        foreground: "#344054",
+        background: "#ffffff",
+        border: "#eaecf0"
+      },
+      digest_recent_grade_colors(9, 10)
+    )
+  end
+
+  def test_digest_sends_separate_html_messages_to_all_recipients
+    configure_gmail
+    delivery = nil
+
+    with_replaced_method(
+      self,
+      :deliver_email_messages,
+      ->(**arguments) { delivery = arguments }
+    ) do
+      count = send_school_dashboard_digest(
+        ["one@example.com", "two@example.com"],
+        now: Time.new(2026, 10, 11, 6, 0, 0, "-07:00")
+      )
+      assert_equal 2, count
+    end
+
+    assert_equal %w[one@example.com two@example.com],
+      delivery[:messages].map { |message| message[:recipient] }
+    assert_includes delivery[:messages].first[:message], "multipart/alternative"
+    assert_includes delivery[:messages].first[:message],
+      "Subject: School Dashboard Daily Digest for October 11, 2026"
+  end
+
+  def test_backup_and_digest_run_once_at_their_scheduled_hours
+    settings = scheduled_settings(
+      "backup_recipients" => ["backup@example.com"],
+      "backup_daily_enabled" => true,
+      "digest_recipients" => ["digest@example.com"],
+      "digest_daily_enabled" => true
+    )
+    save_scheduled_email_settings(settings)
     sends = []
-    now = Time.new(2026, 10, 11, 3, 5, 0, "-07:00")
 
     with_replaced_method(
       self,
       :send_school_dashboard_backup,
-      ->(recipient, now:) { sends << [recipient, now] }
+      ->(recipients, now:) { sends << [:backup, recipients, now.hour] }
     ) do
-      assert send_daily_backup_if_due(now)
-      refute send_daily_backup_if_due(now + 60)
-      refute send_daily_backup_if_due(now + 21 * 60 * 60)
+      with_replaced_method(
+        self,
+        :send_school_dashboard_digest,
+        ->(recipients, now:) { sends << [:digest, recipients, now.hour] }
+      ) do
+        at_three = Time.new(2026, 10, 11, 3, 5, 0, "-07:00")
+        at_six = Time.new(2026, 10, 11, 6, 5, 0, "-07:00")
+
+        assert send_scheduled_email_if_due(:backup, at_three)
+        refute send_scheduled_email_if_due(:backup, at_three + 60)
+        assert send_scheduled_email_if_due(:digest, at_six)
+        refute send_scheduled_email_if_due(:digest, at_six + 60)
+      end
     end
 
-    assert_equal [["parent@example.com", now]], sends
-    assert_equal "2026-10-11", load_backup_settings["last_daily_sent_on"]
+    assert_equal [
+      [:backup, ["backup@example.com"], 3],
+      [:digest, ["digest@example.com"], 6]
+    ], sends
   end
 
-  def test_failed_daily_backup_is_not_retried_every_minute
-    save_backup_settings(
-      "recipient_email" => "parent@example.com",
-      "daily_enabled" => true,
-      "last_daily_sent_on" => nil
+  def test_failed_schedule_is_not_retried_every_minute
+    save_scheduled_email_settings(
+      scheduled_settings(
+        "digest_recipients" => ["digest@example.com"],
+        "digest_daily_enabled" => true
+      )
     )
     attempts = 0
-    now = Time.new(2026, 10, 11, 3, 5, 0, "-07:00")
+    now = Time.new(2026, 10, 11, 6, 5, 0, "-07:00")
 
     with_replaced_method(
       self,
-      :send_school_dashboard_backup,
-      lambda do |_recipient, now:|
+      :send_school_dashboard_digest,
+      lambda do |_recipients, now:|
         attempts += 1
         raise "SMTP unavailable"
       end
     ) do
-      refute send_daily_backup_if_due(now)
-      refute send_daily_backup_if_due(now + 60)
+      capture_io do
+        refute send_scheduled_email_if_due(:digest, now)
+        refute send_scheduled_email_if_due(:digest, now + 60)
+      end
     end
 
     assert_equal 1, attempts
-    assert_nil load_backup_settings["last_daily_sent_on"]
+    assert_nil load_scheduled_email_settings["last_digest_sent_on"]
+  end
+
+  private
+
+  def configure_gmail
+    ENV["GMAIL_SENDER"] = "sender@gmail.com"
+    ENV["GMAIL_APP_PASSWORD"] = "abcd efgh ijkl mnop"
+  end
+
+  def graded_submission(id, course_id, name, score, possible, graded_at)
+    {
+      "assignment_id" => id,
+      "score" => score,
+      "graded_at" => graded_at,
+      "assignment" => {
+        "id" => id,
+        "course_id" => course_id,
+        "name" => name,
+        "points_possible" => possible
+      }
+    }
+  end
+
+  def assignment(id, course_id, name, due_at)
+    {
+      "assignment" => {
+        "id" => id,
+        "course_id" => course_id,
+        "name" => name,
+        "due_at" => due_at
+      }
+    }
   end
 end

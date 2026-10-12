@@ -26,7 +26,7 @@ if $PROGRAM_NAME == __FILE__
   initialize_dashboard_data
   initialize_event_journal
   start_refresh_thread
-  start_backup_thread
+  start_scheduled_email_thread
 end
 
 # ============================================================
@@ -434,42 +434,57 @@ rescue => e
 end
 
 # ============================================================
-# Email Backups
+# Scheduled Emails
 # ============================================================
 
 server.mount_proc "/backups" do |request, response|
-  backup_error = nil
+  unless %w[GET HEAD].include?(request.request_method)
+    response.status = 405
+    response["Allow"] = "GET, HEAD"
+    response.body = "Method not allowed"
+    next
+  end
+
+  response.status = 303
+  response["Location"] = "/scheduled-emails"
+  response.body = ""
+end
+
+server.mount_proc "/scheduled-emails" do |request, response|
+  email_error = nil
 
   if request.request_method == "POST"
     begin
-      settings = backup_settings_fields(request)
-      save_backup_settings(settings)
+      settings = scheduled_email_settings_fields(request)
+      save_scheduled_email_settings(settings)
 
       case request.query["action"]
       when "save"
         response.status = 303
-        response["Location"] = "/backups?saved=1"
+        response["Location"] = "/scheduled-emails?saved=1"
         response.body = ""
         next
-      when "send"
-        if settings["recipient_email"].empty?
-          raise ArgumentError, "Enter an email address before sending a backup"
-        end
-
-        send_school_dashboard_backup(settings["recipient_email"])
+      when "send_backup"
+        send_school_dashboard_backup(settings["backup_recipients"])
         response.status = 303
-        response["Location"] = "/backups?sent=1"
+        response["Location"] = "/scheduled-emails?sent=backup"
+        response.body = ""
+        next
+      when "send_digest"
+        send_school_dashboard_digest(settings["digest_recipients"])
+        response.status = 303
+        response["Location"] = "/scheduled-emails?sent=digest"
         response.body = ""
         next
       else
-        raise ArgumentError, "Invalid backup action"
+        raise ArgumentError, "Invalid scheduled email action"
       end
-    rescue ArgumentError, BackupConfigurationError => e
-      backup_error = e.message
+    rescue ArgumentError, EmailConfigurationError => e
+      email_error = e.message
       response.status = 422
     rescue => e
-      puts "Unable to send backup email: #{e.class}: #{e.message}"
-      backup_error = "Unable to send the backup email. Check the Gmail settings and try again."
+      puts "Unable to send scheduled email: #{e.class}: #{e.message}"
+      email_error = "Unable to send the email. Check the Gmail settings and try again."
       response.status = 502
     end
   elsif request.request_method != "GET"
@@ -479,16 +494,16 @@ server.mount_proc "/backups" do |request, response|
     next
   end
 
-  settings ||= load_backup_settings
+  settings ||= load_scheduled_email_settings
   gmail_configured =
     begin
-      gmail_backup_configuration
+      gmail_email_configuration
       true
-    rescue BackupConfigurationError
+    rescue EmailConfigurationError
       false
     end
   template = ERB.new(
-    File.read(File.join(APP_ROOT, "views", "backups.erb"))
+    File.read(File.join(APP_ROOT, "views", "scheduled_emails.erb"))
   )
 
   response.status = 200 if request.request_method == "GET"
@@ -496,11 +511,11 @@ server.mount_proc "/backups" do |request, response|
   response["Cache-Control"] = "no-cache"
   response.body = template.result(binding)
 rescue => e
-  puts "Backup settings error: #{e.class}: #{e.message}"
+  puts "Scheduled email settings error: #{e.class}: #{e.message}"
 
   response.status = 500
   response["Content-Type"] = "text/plain; charset=utf-8"
-  response.body = "Unable to load backup settings."
+  response.body = "Unable to load scheduled email settings."
 end
 
 # ============================================================

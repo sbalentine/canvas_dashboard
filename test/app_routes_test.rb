@@ -63,7 +63,7 @@ class AppRoutesTest < Minitest::Test
     manifest = request("/manifest.json")
     class_names = request("/class-names")
     grades = request("/grades")
-    backups = request("/backups")
+    scheduled_emails = request("/scheduled-emails")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
@@ -73,42 +73,54 @@ class AppRoutesTest < Minitest::Test
     assert_includes class_names.body, "Class Names"
     assert_equal "200", grades.code
     assert_includes grades.body, "Edit Assignment Grades"
-    assert_equal "200", backups.code
-    assert_includes backups.body, "Email Backups"
+    assert_equal "200", scheduled_emails.code
+    assert_includes scheduled_emails.body, "Scheduled Emails"
   end
 
-  def test_backup_route_saves_recipient_and_daily_preference
+  def test_scheduled_email_route_saves_separate_recipients_and_preferences
     response = request(
-      "/backups",
+      "/scheduled-emails",
       Net::HTTP::Post,
       "action" => "save",
-      "recipient_email" => "parent@example.com",
-      "daily_enabled" => "true"
+      "backup_recipients" => "backup@example.com",
+      "backup_daily_enabled" => "true",
+      "digest_recipients" => "one@example.com\ntwo@example.com",
+      "digest_daily_enabled" => "true"
     )
 
     assert_equal "303", response.code
-    assert_equal "/backups?saved=1", URI(response["Location"]).request_uri
+    assert_equal "/scheduled-emails?saved=1", URI(response["Location"]).request_uri
     assert_equal(
       {
-        "recipient_email" => "parent@example.com",
-        "daily_enabled" => true,
-        "last_daily_sent_on" => nil
+        "backup_recipients" => ["backup@example.com"],
+        "backup_daily_enabled" => true,
+        "last_backup_sent_on" => nil,
+        "digest_recipients" => ["one@example.com", "two@example.com"],
+        "digest_daily_enabled" => true,
+        "last_digest_sent_on" => nil
       },
-      load_backup_settings
+      load_scheduled_email_settings
     )
   end
 
-  def test_backup_route_reports_missing_gmail_configuration
+  def test_scheduled_email_route_reports_missing_gmail_configuration
     response = request(
-      "/backups",
+      "/scheduled-emails",
       Net::HTTP::Post,
-      "action" => "send",
-      "recipient_email" => "parent@example.com"
+      "action" => "send_digest",
+      "digest_recipients" => "parent@example.com"
     )
 
     assert_equal "422", response.code
     assert_includes response.body, "Gmail is not configured"
     assert_includes response.body, "Configure the Gmail sender and app password"
+  end
+
+  def test_legacy_backup_route_redirects_to_scheduled_emails
+    response = request("/backups")
+
+    assert_equal "303", response.code
+    assert_equal "/scheduled-emails", URI(response["Location"]).request_uri
   end
 
   def test_grade_snapshot_is_sorted_highest_to_lowest

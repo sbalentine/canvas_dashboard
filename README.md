@@ -107,9 +107,13 @@ Successful Canvas responses are cached locally.
 
 If Canvas is temporarily unavailable, the dashboard can continue displaying the last successfully retrieved data instead of becoming unusable.
 
-### ✉️ Email Backups
+### ✉️ Scheduled Emails
 
-The **Email Backups** page can send an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Enter the destination email address, optionally enable delivery every day at 3:00 AM local time, or use **Email Backup Now**.
+The **Scheduled Emails** page supports separate recipient lists and schedules for data backups and a daily school digest. Multiple addresses can be entered on separate lines or separated by commas; each recipient receives an individual email.
+
+#### Data backups
+
+Send an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Optionally enable delivery every day at 3:00 AM local time, or use **Email Backup Now**.
 
 Each message has the subject `School Dashboard Backup for {Current Date}` and contains only the ZIP attachment. The archive is discarded after Gmail accepts the message; no backup ZIP is retained on the system.
 
@@ -120,9 +124,13 @@ To enable email delivery:
 1. Enable 2-Step Verification on the sending Google account.
 2. Create a Google app password for the dashboard.
 3. In the Home Assistant School Dashboard app configuration, set `gmail_sender` to that Google account's email address and `gmail_app_password` to the generated app password.
-4. Restart the app, open **Email Backups**, and configure the destination email address.
+4. Restart the app, open **Scheduled Emails**, and configure the backup and digest recipients.
 
-The Gmail fields are optional. The dashboard continues working normally when they are blank, but backup email delivery remains disabled.
+#### Daily digest
+
+The HTML daily digest prominently displays the complete current grade snapshot, followed by all missing work, assignments due today, assignments due tomorrow, and grades posted during the previous seven days sorted newest-first. It can be sent automatically at 6:00 AM local time or on demand with **Send Daily Digest Now**.
+
+The Gmail fields are optional. The dashboard continues working normally when they are blank, but scheduled email delivery remains disabled.
 
 ### 🔄 Automatic Refresh
 
@@ -390,7 +398,7 @@ Example:
 ```yaml
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.14.0"
+version: "0.15.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
@@ -422,7 +430,7 @@ schema:
   gmail_app_password: password
 ```
 
-Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The Gmail sender and app password are optional and only required for email backups.
+Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The Gmail sender and app password are optional and only required for scheduled emails.
 
 The token is provided to the application through Home Assistant's `/data/options.json` and does **not** need to be stored in the Git repository.
 
