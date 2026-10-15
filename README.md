@@ -25,10 +25,6 @@ It was designed to run continuously as a **Home Assistant add-on on a Raspberry 
 
 ## Product tour
 
-> **Demo data:** Every grade, assignment, date, and score shown below is
-> illustrative data created for the EmberGuide demo. The displayed profile does
-> not contain a real student's academic record.
-
 ### See the whole school day at a glance
 
 ![EmberGuide dashboard with grade snapshot and prioritized assignments](docs/screenshots/dashboard-overview.png)
@@ -71,6 +67,10 @@ Course details connect the overall percentage to the assignments that produced
 it. Recent scores, points possible, dates, and percentages make the estimate
 easy to understand, while local grade editing supports corrections and work
 tracked outside Canvas.
+
+> **Demo data:** Every grade, assignment, date, and score shown above is
+> illustrative data created for the EmberGuide demo. The displayed profile does
+> not contain a real student's academic record.
 
 ---
 
