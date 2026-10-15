@@ -44,7 +44,7 @@ class DemoDataTest < Minitest::Test
     end
     percentages = (cache.fetch("grades") + custom_grades).group_by do |submission|
       submission.dig("assignment", "course_id")
-    end.values.filter_map do |submissions|
+    end.to_h do |course_id, submissions|
       included = submissions.reject do |submission|
         submission["score"].nil? ||
           submission.dig("assignment", "points_possible").to_f.zero? ||
@@ -55,12 +55,25 @@ class DemoDataTest < Minitest::Test
         submission.dig("assignment", "points_possible").to_f
       end
 
-      earned / possible * 100 unless possible.zero?
+      [course_id.to_s, earned / possible * 100]
     end
 
-    assert percentages.any? { |percentage| percentage >= 90 }
-    assert percentages.any? { |percentage| percentage.between?(80, 89.99) }
-    assert percentages.any? { |percentage| percentage.between?(70, 79.99) }
+    grade_order = cache.fetch("courses").filter_map do |course|
+      percentage = percentages[course.fetch("id").to_s]
+      next unless percentage
+
+      letter =
+        if percentage >= 90
+          "A"
+        elsif percentage >= 80
+          "B"
+        else
+          "C"
+        end
+      [course.fetch("name"), letter]
+    end.sort.map(&:last)
+
+    assert_equal %w[A B C A B], grade_order
   end
 
   def test_prepare_runtime_shifts_dates_and_isolates_writable_files

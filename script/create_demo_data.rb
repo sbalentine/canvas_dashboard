@@ -73,12 +73,12 @@ ASSIGNMENT_TOPICS = {
 }.freeze
 
 COURSE_GRADE_TARGETS = {
-  "Language Arts" => 96,
-  "Mathematics" => 92,
-  "Science" => 85,
+  "Language Arts" => 86,
+  "Mathematics" => 78,
+  "Science" => 84,
   "Social Studies" => 90,
-  "Art" => 78,
-  "Physical Education" => 74
+  "Art" => 94,
+  "Physical Education" => 92
 }.freeze
 
 def read_json(file_name, default)
