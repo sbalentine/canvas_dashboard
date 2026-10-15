@@ -30,7 +30,7 @@
 
   <meta
     name="theme-color"
-    content="#5b67d6"
+    content="#080711"
   >
 
   <meta
@@ -112,6 +112,22 @@
         }
       end.sort_by { |grade| [-grade["percentage"], grade["name"]] }
 
+      grade_trend_data = grades_by_course.filter_map do |course_id, submissions|
+        points = grade_trend_points(submissions)
+        next if points.empty?
+
+        current_percentage = points.last["y"]
+
+        {
+          "course_id" => course_id,
+          "label" => display_course_name.call(course_id),
+          "points" => points,
+          "current_percentage" => current_percentage,
+          "letter" => letter_grade(current_percentage),
+          "all_a" => points.all? { |point| point["y"] >= 90 }
+        }
+      end.sort_by { |course| course["label"] }
+
       now = Time.now
       today = now.getlocal.to_date
       tomorrow = today + 1
@@ -170,6 +186,45 @@
       )
       next_schedule_change = schedule_changes.first
     %>
+
+    <nav class="dashboard-nav" aria-label="Main navigation">
+      <a class="dashboard-brand" href="/">
+        <span class="dashboard-brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+        </span>
+        <strong>NextStep</strong>
+      </a>
+
+      <button
+        class="dashboard-nav-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="dashboard-nav-links"
+        aria-label="Open navigation menu"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <div class="dashboard-nav-links" id="dashboard-nav-links">
+        <a class="is-active" href="/">Dashboard</a>
+        <a href="/calendar">Calendar</a>
+        <a href="/grades">Grades</a>
+        <a href="/settings">Settings</a>
+      </div>
+
+      <div class="dashboard-profile">
+        <span aria-hidden="true">
+          <%= h profile_first_name(data)[0]&.upcase %>
+        </span>
+        <div>
+          <strong><%= h profile_first_name(data) %></strong>
+          <small>Student dashboard</small>
+        </div>
+      </div>
+    </nav>
 
     <!-- =====================================================
          Header
@@ -241,7 +296,7 @@
 
     <section class="today-summary">
       <div>
-        <h2>Up Next</h2>
+        <h2 class="dashboard-section-title">Up Next</h2>
 
         <p>
           <% if due_today.zero? && due_tomorrow.zero? && missing.empty? && next_schedule_change.nil? %>
@@ -316,7 +371,7 @@
     <% unless important_calendar_dates.empty? %>
       <section class="section calendar-section">
         <div class="section-header">
-          <h2>🗓️ Important Calendar Dates</h2>
+          <h2 class="dashboard-section-title">Important Calendar Dates</h2>
           <div class="section-header-actions">
             <div class="section-note">Next 30 days</div>
             <% if has_more_calendar_dates %>
@@ -369,8 +424,8 @@
               NEEDS ATTENTION
             </div>
 
-            <h2>
-              ⚠️ Missing Assignments
+            <h2 class="dashboard-section-title dashboard-section-title-danger">
+              Missing Assignments
             </h2>
           </div>
 
@@ -446,7 +501,7 @@
     <section class="section">
 
       <div class="section-header">
-        <h2>✅ My To-Dos</h2>
+        <h2 class="dashboard-section-title">My To-Dos</h2>
 
         <div class="section-note">
           <%= todo.length %> remaining
@@ -661,8 +716,8 @@
 
       <div class="section-header">
 
-        <h2>
-          📅 Upcoming Assignments
+        <h2 class="dashboard-section-title">
+          Upcoming Assignments
         </h2>
 
         <div class="section-header-actions">
@@ -852,8 +907,8 @@
 
       <div class="section-header">
 
-        <h2>
-          📊 Grades
+        <h2 class="dashboard-section-title">
+          Grades
         </h2>
 
         <div class="section-header-actions">
@@ -864,6 +919,67 @@
         </div>
 
       </div>
+
+      <% unless grade_trend_data.empty? %>
+        <div class="grade-trend-summary">
+          <div class="grade-trend-heading">
+            <div>
+              <h3>Grade trends</h3>
+              <p>
+                A quick look at how each class is going this term
+              </p>
+            </div>
+          </div>
+
+          <div class="grade-trend-grid">
+            <% grade_trend_data.each_with_index do |course, index| %>
+              <article class="grade-trend-course-card grade-<%= h course["letter"].downcase %>">
+                <div class="grade-trend-course-copy">
+                  <div>
+                    <h4><%= h course["label"] %></h4>
+                    <p class="grade-trend-encouragement">
+                      <% if course["all_a"] %>
+                        A throughout the term
+                      <% elsif course["current_percentage"] >= 90 %>
+                        Currently in the A range
+                      <% elsif course["current_percentage"] >= 80 %>
+                        Currently in the B range
+                      <% elsif course["current_percentage"] >= 70 %>
+                        Currently in the C range
+                      <% else %>
+                        Keep going
+                      <% end %>
+                    </p>
+                  </div>
+
+                  <div class="grade-trend-current">
+                    <strong><%= h format_number(course["current_percentage"]) %>%</strong>
+                    <span><%= h course["letter"] %></span>
+                  </div>
+                </div>
+
+                <div class="grade-trend-sparkline">
+                  <canvas
+                    id="grade-trend-<%= h course["course_id"] %>"
+                    data-grade-trend-index="<%= index %>"
+                    role="img"
+                    aria-label="<%= h course["label"] %> cumulative grade trend"
+                  >
+                    <%= h course["label"] %> grade trend
+                  </canvas>
+                </div>
+
+                <div class="grade-trend-scale" aria-hidden="true">
+                  <span>A–F scale</span>
+                  <span><%= course["points"].length %> graded <%= course["points"].length == 1 ? "assignment" : "assignments" %></span>
+                </div>
+              </article>
+            <% end %>
+          </div>
+
+          <script id="grade-trend-data" type="application/json"><%= json_for_html_script(grade_trend_data) %></script>
+        </div>
+      <% end %>
 
       <% grade_course_ids.each do |course_id| %>
 
@@ -1088,14 +1204,218 @@
         </div>
       <% end %>
 
-      <a class="class-names-link" href="/settings">
-        Settings
-      </a>
     </footer>
 
   </main>
 
+  <script src="/chart.umd.min.js?v=4.5.1"></script>
   <script>
+    const dashboardNav = document.querySelector(".dashboard-nav");
+    const dashboardNavToggle = document.querySelector(".dashboard-nav-toggle");
+
+    if (dashboardNav && dashboardNavToggle) {
+      const closeNavigation = () => {
+        dashboardNav.classList.remove("is-open");
+        dashboardNavToggle.setAttribute("aria-expanded", "false");
+        dashboardNavToggle.setAttribute("aria-label", "Open navigation menu");
+      };
+
+      dashboardNavToggle.addEventListener("click", () => {
+        const isOpen = dashboardNav.classList.toggle("is-open");
+
+        dashboardNavToggle.setAttribute("aria-expanded", isOpen.toString());
+        dashboardNavToggle.setAttribute(
+          "aria-label",
+          isOpen ? "Close navigation menu" : "Open navigation menu"
+        );
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key !== "Escape" || !dashboardNav.classList.contains("is-open")) {
+          return;
+        }
+
+        closeNavigation();
+        dashboardNavToggle.focus();
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth > 700) closeNavigation();
+      });
+    }
+
+    const trendDataElement = document.getElementById("grade-trend-data");
+
+    if (trendDataElement) {
+      const trendData = JSON.parse(trendDataElement.textContent);
+      const colors = [
+        "#8583ff",
+        "#4fd6a0",
+        "#ff8a5b",
+        "#58a6ff",
+        "#ffc96b",
+        "#c084fc",
+        "#ff7085"
+      ];
+      const formatNumber = (value) => (
+        Number.isInteger(value) ? value.toString() : value.toFixed(1)
+      );
+      const gradeBands = {
+        id: "gradeBands",
+        beforeDraw(chart) {
+          const { ctx, chartArea, scales } = chart;
+
+          if (!chartArea) return;
+
+          const bands = [
+            { top: 105, bottom: 90, color: "rgba(79, 214, 160, 0.10)" },
+            { top: 90, bottom: 80, color: "rgba(88, 166, 255, 0.07)" },
+            { top: 80, bottom: 70, color: "rgba(255, 201, 107, 0.07)" },
+            { top: 70, bottom: 60, color: "rgba(255, 138, 91, 0.06)" },
+            { top: 60, bottom: 50, color: "rgba(255, 112, 133, 0.06)" }
+          ];
+
+          ctx.save();
+          bands.forEach((band) => {
+            const top = scales.y.getPixelForValue(band.top);
+            const bottom = scales.y.getPixelForValue(band.bottom);
+
+            ctx.fillStyle = band.color;
+            ctx.fillRect(
+              chartArea.left,
+              top,
+              chartArea.right - chartArea.left,
+              bottom - top
+            );
+          });
+          ctx.restore();
+        }
+      };
+
+      document.querySelectorAll("[data-grade-trend-index]").forEach((canvas) => {
+        const index = Number(canvas.dataset.gradeTrendIndex);
+        const course = trendData[index];
+        const color = colors[index % colors.length];
+
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            datasets: [{
+              label: course.label,
+              data: course.points,
+              borderColor: color,
+              backgroundColor: color,
+              borderWidth: 2.5,
+              pointRadius(context) {
+                const points = context.dataset.data;
+                const index = context.dataIndex;
+
+                if (index === 0) return 3;
+
+                return points[index].y === points[index - 1].y ? 0 : 3;
+              },
+              pointHoverRadius: 5,
+              pointHitRadius: 12,
+              pointBorderColor: "#121020",
+              pointBorderWidth: 2,
+              tension: 0.3
+            }]
+          },
+          plugins: [gradeBands],
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+              mode: "nearest",
+              intersect: false
+            },
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                displayColors: false,
+                filter(context) {
+                  const points = context.dataset.data;
+                  const index = context.dataIndex;
+
+                  return index === 0 || points[index].y !== points[index - 1].y;
+                },
+                callbacks: {
+                  title(items) {
+                    const point = items[0]?.raw;
+
+                    if (!point?.x) return "";
+
+                    return new Date(point.x).toLocaleDateString(
+                      undefined,
+                      { month: "short", day: "numeric", year: "numeric" }
+                    );
+                  },
+                  label(context) {
+                    const point = context.raw;
+                    const assignmentPercentage =
+                      (point.score / point.points_possible) * 100;
+
+                    return [
+                      point.assignment,
+                      `Assignment: ${formatNumber(point.score)}/${formatNumber(point.points_possible)} pts (${formatNumber(assignmentPercentage)}%)`,
+                      `Course grade: ${formatNumber(point.y)}%`
+                    ];
+                  },
+                  afterLabel(context) {
+                    const point = context.raw;
+
+                    return `Running total: ${formatNumber(point.earned)}/${formatNumber(point.possible)} pts`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                type: "linear",
+                display: false
+              },
+              y: {
+                display: true,
+                min: 50,
+                max: 105,
+                afterBuildTicks(axis) {
+                  axis.ticks = [55, 65, 75, 85, 95].map((value) => ({
+                    value
+                  }));
+                },
+                border: {
+                  display: false
+                },
+                grid: {
+                  color: "rgba(174, 171, 209, 0.12)",
+                  drawTicks: false
+                },
+                ticks: {
+                  color: "#9b98b2",
+                  padding: 8,
+                  font: {
+                    size: 11,
+                    weight: "700"
+                  },
+                  callback(value) {
+                    return {
+                      95: "A",
+                      85: "B",
+                      75: "C",
+                      65: "D",
+                      55: "F"
+                    }[value];
+                  }
+                }
+              }
+            }
+          }
+        });
+      });
+    }
+
     document.querySelector(".refresh-form").addEventListener("submit", (event) => {
       const button = event.currentTarget.querySelector(".refresh-button");
 

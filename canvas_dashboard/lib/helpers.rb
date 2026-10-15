@@ -35,6 +35,49 @@ def letter_grade(percentage)
   end
 end
 
+def grade_trend_points(submissions)
+  chronological = Array(submissions).filter_map do |submission|
+    assignment = submission["assignment"] || {}
+    recorded_at = parse_canvas_time(
+      submission["graded_at"] || assignment["due_at"]
+    )
+    points_possible = assignment["points_possible"]
+
+    next unless recorded_at && !submission["score"].nil?
+    next if points_possible.nil? || points_possible.to_f <= 0
+
+    [recorded_at, submission]
+  end.sort_by(&:first)
+
+  earned = 0.0
+  possible = 0.0
+
+  chronological.map do |recorded_at, submission|
+    assignment = submission["assignment"]
+    score = submission["score"].to_f
+    points_possible = assignment["points_possible"].to_f
+    earned += score
+    possible += points_possible
+
+    {
+      "x" => recorded_at.to_i * 1000,
+      "y" => percentage(earned, possible),
+      "assignment" => assignment["name"],
+      "score" => score,
+      "points_possible" => points_possible,
+      "earned" => earned,
+      "possible" => possible
+    }
+  end
+end
+
+def json_for_html_script(value)
+  JSON.generate(value)
+    .gsub("&", "\\u0026")
+    .gsub("<", "\\u003c")
+    .gsub(">", "\\u003e")
+end
+
 def course_symbol(name)
   case name.to_s.downcase
   when /science|biology|chemistry|physics/

@@ -3,35 +3,40 @@
 }
 
 :root {
-  --background: #f4f6f8;
-  --card: #ffffff;
-  --text: #1d2939;
-  --muted: #667085;
-  --border: #eaecf0;
+  color-scheme: dark;
+  --background: #080711;
+  --card: #121020;
+  --card-raised: #171427;
+  --text: #f4f2ff;
+  --muted: #9b98b2;
+  --border: #29263d;
 
-  --danger: #b42318;
-  --danger-bg: #fff1f0;
-  --danger-border: #fecdca;
+  --danger: #ff7085;
+  --danger-bg: rgba(255, 112, 133, 0.1);
+  --danger-border: rgba(255, 112, 133, 0.32);
 
-  --warning: #b54708;
-  --warning-bg: #fffaeb;
+  --warning: #ffc96b;
+  --warning-bg: rgba(255, 201, 107, 0.1);
 
-  --success: #027a48;
-  --success-bg: #ecfdf3;
-  --success-border: #abefc6;
+  --success: #4fd6a0;
+  --success-bg: rgba(79, 214, 160, 0.1);
+  --success-border: rgba(79, 214, 160, 0.32);
 
-  --info: #175cd3;
-  --info-bg: #eff8ff;
+  --info: #58a6ff;
+  --info-bg: rgba(88, 166, 255, 0.1);
 
-  --orange: #c4320a;
-  --orange-bg: #fff6ed;
+  --orange: #ff8a5b;
+  --orange-bg: rgba(255, 138, 91, 0.1);
 
-  --purple: #5b67d6;
+  --purple: #8583ff;
 }
 
 body {
   margin: 0;
-  background: var(--background);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(92, 79, 203, 0.13), transparent 32%),
+    radial-gradient(circle at 90% 20%, rgba(62, 45, 142, 0.09), transparent 30%),
+    var(--background);
   color: var(--text);
 
   font-family:
@@ -51,11 +56,11 @@ a:hover {
 }
 
 .container {
-  max-width: 980px;
+  max-width: 1180px;
   margin: 0 auto;
 
   padding:
-    max(24px, env(safe-area-inset-top))
+    max(18px, env(safe-area-inset-top))
     24px
     max(40px, env(safe-area-inset-bottom));
 }
@@ -64,6 +69,157 @@ a:hover {
    Header
    ========================================================== */
 
+.dashboard-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(15, 13, 27, 0.9);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+}
+
+.dashboard-brand:hover,
+.dashboard-nav-links a:hover {
+  text-decoration: none;
+}
+
+.dashboard-brand-mark {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 24px;
+}
+
+.dashboard-brand-mark span {
+  display: block;
+  width: 8px;
+  height: 19px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #9e9cff, #6663f2);
+  transform: rotate(18deg);
+}
+
+.dashboard-brand-mark span:last-child {
+  height: 14px;
+  opacity: 0.72;
+  transform: rotate(18deg) translateY(2px);
+}
+
+.dashboard-nav-links {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  gap: 4px;
+}
+
+.dashboard-nav-links a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-nav-links a:hover,
+.dashboard-nav-links a.is-active {
+  color: var(--text);
+}
+
+.dashboard-nav-links a.is-active::after {
+  position: absolute;
+  right: 11px;
+  bottom: -11px;
+  left: 11px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--purple);
+  content: "";
+}
+
+.dashboard-nav-toggle {
+  display: none;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: #151225;
+  cursor: pointer;
+}
+
+.dashboard-nav-toggle span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text);
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.dashboard-nav-toggle span + span {
+  margin-top: 5px;
+}
+
+.dashboard-nav.is-open .dashboard-nav-toggle span:first-child {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.dashboard-nav.is-open .dashboard-nav-toggle span:nth-child(2) {
+  opacity: 0;
+}
+
+.dashboard-nav.is-open .dashboard-nav-toggle span:last-child {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.dashboard-profile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+}
+
+.dashboard-profile > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(158, 156, 255, 0.5);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #302b56, #17142a);
+  color: #d9d7ff;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.dashboard-profile strong,
+.dashboard-profile small {
+  display: block;
+}
+
+.dashboard-profile strong {
+  font-size: 11px;
+}
+
+.dashboard-profile small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 9px;
+}
+
 .top-header {
   position: relative;
   display: flex;
@@ -71,21 +227,21 @@ a:hover {
   align-items: center;
   overflow: hidden;
   gap: 20px;
-  margin-bottom: 18px;
-  padding: 28px 30px;
-  border-bottom: 5px solid #aeb8ff;
-  border-radius: 8px;
+  margin-bottom: 14px;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
   background:
     repeating-linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.04) 0,
-      rgba(255, 255, 255, 0.04) 1px,
+      rgba(255, 255, 255, 0.025) 0,
+      rgba(255, 255, 255, 0.025) 1px,
       transparent 1px,
       transparent 18px
     ),
-    #252a34;
-  box-shadow: 0 8px 24px rgba(24, 28, 35, 0.2);
-  color: white;
+    linear-gradient(135deg, #17142a, #0f0d1b);
+  box-shadow: none;
+  color: var(--text);
 }
 
 .header-copy {
@@ -105,14 +261,14 @@ a:hover {
 .top-header h1 {
   margin: 0 0 7px;
   font-family: "Avenir Next", "Trebuchet MS", sans-serif;
-  font-size: 36px;
+  font-size: 30px;
   font-weight: 800;
   letter-spacing: 0;
   line-height: 1.08;
 }
 
 .top-header .subtitle {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--muted);
   font-size: 15px;
 }
 
@@ -121,18 +277,18 @@ a:hover {
   z-index: 1;
   flex: 0 0 84px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.96);
-  color: #252a34;
+  border: 1px solid #393453;
+  border-radius: 9px;
+  background: #0c0b17;
+  color: var(--text);
   text-align: center;
 }
 
 .header-date-mark span {
   display: block;
   padding: 5px 8px;
-  background: #aeb8ff;
-  color: #252a34;
+  background: #24203f;
+  color: #bdbaff;
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -885,13 +1041,29 @@ a:hover {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-
-  margin-bottom: 12px;
+  gap: 20px;
+  margin-bottom: 14px;
 }
 
 .section-header h2 {
   margin: 0;
-  font-size: 25px;
+  font-size: 28px;
+}
+
+.dashboard-section-title {
+  font-family: "Avenir Next", "Trebuchet MS", sans-serif;
+  color: #252a34;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.today-summary .dashboard-section-title {
+  margin-bottom: 9px;
+}
+
+.dashboard-section-title-danger {
+  color: var(--danger);
 }
 
 .section-note {
@@ -992,6 +1164,142 @@ a:hover {
 /* ==========================================================
    Grades
    ========================================================== */
+
+.grade-trend-summary {
+  margin-bottom: 16px;
+}
+
+.grade-trend-heading {
+  margin-bottom: 14px;
+}
+
+.grade-trend-heading h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.grade-trend-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.grade-trend-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.grade-trend-course-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(16, 24, 40, 0.04);
+}
+
+.grade-trend-course-copy {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.grade-trend-course-card h4 {
+  overflow: hidden;
+  margin: 0 0 4px;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.grade-trend-encouragement {
+  margin: 0;
+  color: var(--success);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.grade-trend-current {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 7px;
+  color: var(--success);
+}
+
+.grade-trend-current strong {
+  font-size: 20px;
+}
+
+.grade-trend-current span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  background: var(--success-bg);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.grade-trend-course-card.grade-b .grade-trend-encouragement,
+.grade-trend-course-card.grade-b .grade-trend-current {
+  color: var(--info);
+}
+
+.grade-trend-course-card.grade-b .grade-trend-current span {
+  background: var(--info-bg);
+}
+
+.grade-trend-course-card.grade-c .grade-trend-encouragement,
+.grade-trend-course-card.grade-c .grade-trend-current {
+  color: var(--warning);
+}
+
+.grade-trend-course-card.grade-c .grade-trend-current span {
+  background: var(--warning-bg);
+}
+
+.grade-trend-course-card.grade-d .grade-trend-encouragement,
+.grade-trend-course-card.grade-d .grade-trend-current {
+  color: var(--orange);
+}
+
+.grade-trend-course-card.grade-d .grade-trend-current span {
+  background: var(--orange-bg);
+}
+
+.grade-trend-course-card.grade-f .grade-trend-encouragement,
+.grade-trend-course-card.grade-f .grade-trend-current {
+  color: var(--danger);
+}
+
+.grade-trend-course-card.grade-f .grade-trend-current span {
+  background: var(--danger-bg);
+}
+
+.grade-trend-sparkline {
+  position: relative;
+  height: 124px;
+  margin-top: 10px;
+}
+
+.grade-trend-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.grade-trend-scale span:first-child {
+  color: var(--muted);
+  font-weight: 800;
+}
 
 .grade-header {
   display: flex;
@@ -2122,6 +2430,14 @@ a:hover {
     padding: 17px;
   }
 
+  .grade-trend-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grade-trend-course-card {
+    padding: 15px;
+  }
+
   .missing-heading h2,
   .section-header h2 {
     font-size: 22px;
@@ -2202,5 +2518,335 @@ a:hover {
 @media (max-width: 390px) {
   .grade-snapshot-list {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================
+   Dark analytics theme
+   ========================================================== */
+
+.dashboard-section-title {
+  color: var(--text);
+  font-size: 24px;
+  letter-spacing: -0.025em;
+}
+
+.section {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.018), transparent 36%),
+    #0f0e1b;
+}
+
+.section-header {
+  margin-bottom: 16px;
+}
+
+.section > .card {
+  margin-bottom: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.section > .grade-card:last-child {
+  margin-bottom: 0;
+}
+
+.section .grade-trend-summary {
+  margin-bottom: 14px;
+}
+
+.grade-snapshot,
+.today-summary,
+.card,
+.grade-card,
+.grade-trend-course-card,
+.missing-section,
+.calendar-settings-card,
+.settings-link-card {
+  border-color: var(--border);
+  background: var(--card);
+  box-shadow: none;
+}
+
+.grade-snapshot,
+.today-summary {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.grade-snapshot {
+  margin-top: 0;
+}
+
+.grade-snapshot-item {
+  border-color: color-mix(in srgb, currentColor 45%, transparent);
+  background: color-mix(in srgb, currentColor 10%, var(--card));
+}
+
+.grade-snapshot-item.perfect-grade {
+  border-color: rgba(255, 201, 107, 0.5);
+  background: rgba(255, 201, 107, 0.1);
+  box-shadow: none;
+  color: var(--warning);
+}
+
+.grade-snapshot-item.perfect-grade::after {
+  background: linear-gradient(
+    110deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.12) 48%,
+    transparent 76%
+  );
+}
+
+.today-summary {
+  border-left: 1px solid var(--border);
+}
+
+.up-next-items .schedule-change {
+  background: rgba(133, 131, 255, 0.12);
+  color: #aaa8ff;
+}
+
+.refresh-button,
+.settings-actions button,
+.todo-save-button,
+.grade-course-filter a.is-selected,
+.coursework-row button,
+.coursework-create-form button {
+  border-color: #6e6bea;
+  background: linear-gradient(135deg, #7774f5, #625fe2);
+  box-shadow: 0 8px 20px rgba(98, 95, 226, 0.18);
+}
+
+.refresh-button:hover {
+  background: linear-gradient(135deg, #8583ff, #6d69ef);
+}
+
+.system-status,
+.token-expiration-alert,
+.missing-section {
+  border-radius: 14px;
+}
+
+.missing-section {
+  border-width: 1px;
+}
+
+.missing-row,
+.todo-row,
+.upcoming-row,
+.grade-row,
+.todo-create {
+  border-color: rgba(174, 171, 209, 0.12);
+}
+
+.todo-create-form input,
+.todo-create-form select,
+.todo-create-form textarea,
+.todo-edit input,
+.todo-edit select,
+.todo-edit textarea,
+.calendar-settings-card input,
+.calendar-settings-card textarea,
+.assignment-grade-row input,
+.custom-grade-row input,
+.custom-grade-row select,
+.class-name-row input,
+.scheduled-email-card textarea,
+.coursework-row input[type="text"],
+.coursework-row input[type="datetime-local"],
+.coursework-row select,
+.coursework-create-form input,
+.coursework-create-form select {
+  border-color: #37334d;
+  background: #0c0b17;
+  color: var(--text);
+}
+
+.todo-create-form input:focus,
+.todo-create-form select:focus,
+.todo-create-form textarea:focus,
+.todo-edit input:focus,
+.todo-edit select:focus,
+.todo-edit textarea:focus,
+.calendar-settings-card input:focus,
+.calendar-settings-card textarea:focus,
+.assignment-grade-row input:focus,
+.custom-grade-row input:focus,
+.custom-grade-row select:focus,
+.class-name-row input:focus,
+.scheduled-email-card textarea:focus,
+.coursework-row input:focus,
+.coursework-row select:focus,
+.coursework-create-form input:focus,
+.coursework-create-form select:focus {
+  border-color: var(--purple);
+  outline: 2px solid rgba(133, 131, 255, 0.16);
+  outline-offset: 1px;
+}
+
+.todo-checkbox,
+.remove-new-grade {
+  border-color: #46415e;
+  background: #0c0b17;
+}
+
+.todo-edit form,
+.teacher-comment {
+  border-color: var(--border);
+  background: #0d0c19;
+  color: #bbb8cc;
+}
+
+.upcoming-row.needs-work {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 201, 107, 0.08),
+    rgba(255, 201, 107, 0)
+  );
+}
+
+.calendar-row time {
+  border-color: rgba(133, 131, 255, 0.42);
+  background: #0c0b17;
+}
+
+.calendar-row time span {
+  background: rgba(133, 131, 255, 0.14);
+  color: #b8b6ff;
+}
+
+.grade-trend-course-card {
+  border-radius: 12px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 42%),
+    var(--card);
+}
+
+.grade-trend-heading h3,
+.grade-header h3 {
+  color: var(--text);
+}
+
+.grade-header {
+  border-top-width: 2px;
+}
+
+.grade-header.grade-a,
+.grade-header.grade-b,
+.grade-header.grade-c,
+.grade-header.grade-d,
+.grade-header.grade-f {
+  background: color-mix(in srgb, currentColor 8%, var(--card));
+}
+
+.grade-meta {
+  color: var(--muted);
+}
+
+.grade-row.low-grade,
+.grade-row.warning-grade,
+.assignment-grade-row.is-edited {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+.settings-link-card:hover {
+  border-color: rgba(133, 131, 255, 0.62);
+}
+
+.settings-link-card strong,
+.settings-header > a,
+.section-action-link,
+.grade-card-edit-link,
+.grade-more-button,
+.calendar-more-button,
+.add-grade-row {
+  color: #9d9bff;
+}
+
+.grade-course-filter a {
+  background: #0c0b17;
+}
+
+.site-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 700px) {
+  .dashboard-nav {
+    flex-wrap: wrap;
+    gap: 14px;
+    overflow: visible;
+    padding: 10px 12px;
+  }
+
+  .dashboard-nav-toggle {
+    display: block;
+    margin-left: auto;
+  }
+
+  .dashboard-nav-links {
+    display: none;
+    order: 3;
+    flex: 0 0 100%;
+    align-items: stretch;
+    align-self: auto;
+    flex-direction: column;
+    gap: 3px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .dashboard-nav.is-open .dashboard-nav-links {
+    display: flex;
+  }
+
+  .dashboard-nav-links a {
+    min-height: 42px;
+    padding: 0 11px;
+    border-radius: 8px;
+  }
+
+  .dashboard-nav-links a:hover,
+  .dashboard-nav-links a.is-active {
+    background: rgba(133, 131, 255, 0.1);
+  }
+
+  .dashboard-nav-links a.is-active::after {
+    top: 9px;
+    right: auto;
+    bottom: 9px;
+    left: 0;
+    width: 2px;
+    height: auto;
+  }
+
+  .dashboard-profile {
+    display: none;
+  }
+
+  .top-header {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-section-title {
+    font-size: 22px;
+  }
+
+  .todo-create-form input[type="date"],
+  .todo-edit input[type="date"] {
+    border-color: #37334d;
+    background-color: #0c0b17;
+    color: var(--text);
   }
 }

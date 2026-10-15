@@ -18,6 +18,43 @@ class HelpersTest < Minitest::Test
     assert_equal "🌎", course_symbol("S1 G6 SS")
   end
 
+  def test_grade_trend_points_build_cumulative_percentages_in_date_order
+    points = grade_trend_points([
+      {
+        "score" => 18,
+        "graded_at" => "2026-10-10T12:00:00Z",
+        "assignment" => {
+          "name" => "Project",
+          "points_possible" => 20
+        }
+      },
+      {
+        "score" => 8,
+        "graded_at" => "2026-10-01T12:00:00Z",
+        "assignment" => {
+          "name" => "Quiz",
+          "points_possible" => 10
+        }
+      }
+    ])
+
+    assert_equal ["Quiz", "Project"], points.map { |point| point["assignment"] }
+    assert_equal [80.0, 86.7], points.map { |point| point["y"] }
+    assert_equal 26.0, points.last["earned"]
+    assert_equal 30.0, points.last["possible"]
+  end
+
+  def test_json_for_html_script_escapes_script_terminators
+    json = json_for_html_script("label" => "</script><script>alert(1)</script>")
+
+    refute_includes json, "<"
+    refute_includes json, ">"
+    assert_equal(
+      { "label" => "</script><script>alert(1)</script>" },
+      JSON.parse(json)
+    )
+  end
+
   def test_combined_grades_exclude_hidden_earned_and_possible_points
     data = {
       "courses" => [{ "id" => 1 }],

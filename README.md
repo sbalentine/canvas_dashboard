@@ -16,6 +16,9 @@ The dashboard provides a simple view of the school information that matters most
 * 📱 Mobile and iPad-friendly interface
 * 🎓 Branded Home Assistant app-store artwork
 
+The interface uses a responsive dark analytics theme with compact navigation,
+high-contrast cards, and locally rendered grade trend charts.
+
 It was designed to run continuously as a **Home Assistant add-on on a Raspberry Pi**, but it can also be run locally on macOS or another machine with Ruby.
 
 ---
@@ -87,7 +90,11 @@ Incomplete future assignments appear in **Upcoming Assignments** and incomplete 
 
 Calculates a current grade for each course from graded assignments returned by the Canvas API.
 
-The dashboard also shows recent individual assignment grades.
+The dashboard also shows recent individual assignment grades and encouraging
+per-course Chart.js trend cards. Each card highlights the current grade and
+reconstructs the cumulative percentage after every dated assignment in the
+current Canvas data on a fixed A–F scale. Chart.js is bundled with the
+dashboard, so rendering does not depend on an external CDN.
 
 > **Note:** These percentages are calculated from the assignments available through the API and may not exactly match the official Canvas course grade, particularly when a teacher uses weighted assignment groups, grading periods, dropped assignments, or other gradebook rules.
 
@@ -400,7 +407,7 @@ Example:
 ```yaml
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.17.0"
+version: "0.18.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false

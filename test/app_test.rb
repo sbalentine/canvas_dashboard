@@ -130,6 +130,13 @@ class AppTest < Minitest::Test
     assert_includes html, "Quiz &lt;One&gt;"
     assert_includes html, "No graded Canvas assignments"
     assert_includes html, "1 missing"
+    assert_includes html, 'class="dashboard-nav"'
+    assert_includes html, "<strong>NextStep</strong>"
+    assert_includes html, 'class="dashboard-nav-toggle"'
+    assert_includes html, 'aria-controls="dashboard-nav-links"'
+    assert_includes html, 'class="is-active" href="/">Dashboard</a>'
+    assert_includes html, 'class="dashboard-section-title"'
+    refute_match(/<h2[^>]*>\s*[🗓️⚠️✅📅📊]/, html)
     refute_includes html, "0 assignments"
     refute_includes html, "0 due tomorrow"
     refute_includes html, "Quiz <One>"

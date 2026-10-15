@@ -62,6 +62,7 @@ class AppRoutesTest < Minitest::Test
   def test_dashboard_and_static_routes
     dashboard = request("/")
     stylesheet = request("/dashboard.css")
+    chart = request("/chart.umd.min.js")
     manifest = request("/manifest.json")
     class_names = request("/class-names")
     grades = request("/grades")
@@ -74,6 +75,8 @@ class AppRoutesTest < Minitest::Test
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
     assert_equal "text/css; charset=utf-8", stylesheet["Content-Type"]
+    assert_equal "text/javascript; charset=utf-8", chart["Content-Type"]
+    assert_includes chart.body, "Chart.js v4.5.1"
     assert_equal "School Dashboard", JSON.parse(manifest.body)["name"]
     assert_equal "200", class_names.code
     assert_includes class_names.body, "Class Names"
