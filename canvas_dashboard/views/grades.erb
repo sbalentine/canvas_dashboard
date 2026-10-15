@@ -60,6 +60,9 @@
         <h2>Canvas Assignments</h2>
         <p class="settings-intro">
           Leave both fields blank to use Canvas. Enter only the value that needs correcting.
+          Select "Hide until Canvas updates" to hide an incorrect assignment from the dashboard
+          and daily digest and exclude it from calculated grades. It returns automatically when
+          Canvas changes its score, possible points, or grading timestamp. Uncheck to restore it manually.
         </p>
 
         <div class="assignment-grade-list">
@@ -99,13 +102,23 @@
                 <div class="assignment-grade-title">
                   <strong><%= h assignment["name"] %></strong>
                   <% unless override.empty? %>
-                    <span class="edited-assignment-label">Edited</span>
+                    <span class="edited-assignment-label"><%= override["hidden"] == true ? "Hidden" : "Edited" %></span>
                   <% end %>
                 </div>
                 <span>
                   <%= h mappings.fetch(course_id, course_name(data, course_id)) %>
                   · Canvas: <%= h format_number(submission["score"]) %>/<%= h format_number(assignment["points_possible"]) %>
                 </span>
+                <label class="assignment-grade-hide">
+                  <input
+                    type="checkbox"
+                    name="canvas_<%= h assignment_id %>_hidden"
+                    value="true"
+                    <%= "checked" if override["hidden"] == true %>
+                    aria-label="Hide <%= h assignment["name"] %> until Canvas updates"
+                  >
+                  <span>Hide until Canvas updates</span>
+                </label>
               </div>
 
               <label>

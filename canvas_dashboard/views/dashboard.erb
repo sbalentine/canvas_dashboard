@@ -87,6 +87,7 @@
       end
 
       grade_overrides = load_grade_overrides
+      data = hide_assignments_from_dashboard(data, grade_overrides)
       valid_grades = combined_grade_submissions(data, grade_overrides)
       grades_by_course = valid_grades.group_by do |submission|
         submission.dig("assignment", "course_id").to_s

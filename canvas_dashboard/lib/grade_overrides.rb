@@ -44,6 +44,20 @@ def save_grade_overrides(overrides)
   File.rename(temporary_file, GRADE_OVERRIDES_FILE)
 end
 
+def canvas_assignment_hidden?(item, overrides)
+  overrides.fetch("canvas", {}).dig(assignment_id(item).to_s, "hidden") == true
+end
+
+def hide_assignments_from_dashboard(data, overrides)
+  data.merge(
+    %w[grades missing upcoming].to_h do |collection|
+      [collection, Array(data[collection]).reject do |item|
+        canvas_assignment_hidden?(item, overrides)
+      end]
+    end
+  )
+end
+
 def reconcile_canvas_grade_overrides(data)
   overrides = load_grade_overrides
   canvas_overrides = overrides.fetch("canvas", {})

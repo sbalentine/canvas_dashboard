@@ -67,6 +67,7 @@ def combined_grade_submissions(data, grade_overrides)
     assignment = submission["assignment"]
 
     assignment &&
+      !canvas_assignment_hidden?(submission, grade_overrides) &&
       !submission["score"].nil? &&
       !assignment["points_possible"].nil? &&
       assignment["omit_from_final_grade"] != true

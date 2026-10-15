@@ -342,6 +342,7 @@ def digest_data(now: Time.now)
   data = dashboard_data_with_manual || {}
   mappings = load_course_name_mappings
   overrides = load_grade_overrides
+  data = hide_assignments_from_dashboard(data, overrides)
   today = now.getlocal.to_date
 
   {

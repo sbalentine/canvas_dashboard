@@ -687,8 +687,9 @@ def grade_override_fields(request, data, existing, course_id: nil)
       request.query["canvas_#{assignment_id}_score"].to_s.strip
     points_value =
       request.query["canvas_#{assignment_id}_points"].to_s.strip
+    hidden = request.query["canvas_#{assignment_id}_hidden"] == "true"
 
-    next if score_value.empty? && points_value.empty?
+    next if score_value.empty? && points_value.empty? && !hidden
 
     canvas[assignment_id.to_s] = {
       "score" => score_value.empty? ? nil : grade_number(score_value, "Earned points"),
@@ -699,6 +700,7 @@ def grade_override_fields(request, data, existing, course_id: nil)
       "canvas_graded_at" => submission["graded_at"],
       "updated_at" => Time.now.iso8601
     }
+    canvas[assignment_id.to_s]["hidden"] = true if hidden
   end
 
   valid_course_ids =

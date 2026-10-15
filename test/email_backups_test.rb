@@ -236,6 +236,38 @@ class EmailBackupsTest < Minitest::Test
     assert_includes text, "GRADES POSTED IN THE LAST 7 DAYS"
   end
 
+  def test_digest_excludes_hidden_assignments_and_their_points
+    now = Time.local(2026, 10, 14, 9)
+    hidden_assignment = {
+      "id" => 10, "course_id" => 1, "name" => "Premature Grade",
+      "points_possible" => 100,
+      "due_at" => Time.local(2026, 10, 14, 12).iso8601
+    }
+    $dashboard_data["grades"] = [
+      { "assignment_id" => 10, "score" => 0,
+        "graded_at" => now.iso8601, "assignment" => hidden_assignment },
+      { "assignment_id" => 11, "score" => 9,
+        "graded_at" => now.iso8601,
+        "assignment" => { "id" => 11, "course_id" => 1,
+                          "name" => "Real Grade", "points_possible" => 10 } }
+    ]
+    $dashboard_data["missing"] = [hidden_assignment]
+    $dashboard_data["upcoming"] = [{ "assignment" => hidden_assignment }]
+    original = deep_copy($dashboard_data)
+    save_grade_overrides("canvas" => { "10" => { "hidden" => true } })
+
+    digest = digest_data(now: now)
+
+    assert_equal [90], digest["grade_snapshot"].map { |grade| grade["percentage"] }
+    assert_equal [11], digest["recent_grades"].map { |grade| grade["assignment_id"] }
+    assert_empty digest["missing"]
+    assert_empty digest["due_today"]
+    assert_empty digest["due_tomorrow"]
+    refute_includes digest_html_body(digest, now), "Premature Grade"
+    refute_includes digest_text_body(digest, now), "Premature Grade"
+    assert_equal original, dashboard_data
+  end
+
   def test_digest_grade_colors_match_dashboard_grade_palette
     assert_equal(
       { foreground: "#027a48", background: "#ecfdf3" },

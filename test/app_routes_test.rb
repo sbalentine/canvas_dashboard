@@ -275,6 +275,81 @@ class AppRoutesTest < Minitest::Test
     assert_includes response.body, "valid number"
   end
 
+  def test_hidden_assignment_returns_with_latest_canvas_grade_after_refresh
+    $dashboard_data["grades"] << {
+      "assignment_id" => 11,
+      "score" => 10,
+      "assignment" => {
+        "id" => 11, "course_id" => 1,
+        "name" => "Other Quiz", "points_possible" => 10
+      }
+    }
+    $dashboard_data["grades"][0]["assignment"]["name"] = "Premature Grade"
+    assignment = deep_copy($dashboard_data["grades"][0]["assignment"])
+    assignment["due_at"] = (Time.now + 3600).iso8601
+    $dashboard_data["missing"] = [assignment]
+    $dashboard_data["upcoming"] = [{ "assignment" => assignment }]
+    original = deep_copy($dashboard_data)
+
+    saved = request(
+      "/grades", Net::HTTP::Post,
+      "canvas_10_hidden" => "true",
+      "canvas_10_score" => "9"
+    )
+
+    assert_equal "303", saved.code
+    assert_equal true, load_grade_overrides.dig("canvas", "10", "hidden")
+    assert_equal 8, load_grade_overrides.dig("canvas", "10", "canvas_score")
+    assert_equal original, dashboard_data
+
+    editor = request("/grades?course_id=1")
+    assert_equal "200", editor.code
+    assert_includes editor.body, "Premature Grade"
+    assert_includes editor.body, ">Hidden<"
+    assert_match(/name="canvas_10_hidden"\s+value="true"\s+checked/, editor.body)
+
+    with_replaced_method(self, :fetch_dashboard_data, -> { deep_copy(original) }) do
+      capture_io { refresh_dashboard }
+    end
+
+    assert_equal true, load_grade_overrides.dig("canvas", "10", "hidden")
+    dashboard = request("/")
+    assert_equal "200", dashboard.code
+    refute_includes dashboard.body, "Premature Grade"
+    assert_includes dashboard.body, "<strong>100%</strong>"
+
+    changed = deep_copy(original)
+    changed["grades"][0]["score"] = 6
+    changed["grades"][0]["graded_at"] = Time.now.iso8601
+    with_replaced_method(self, :fetch_dashboard_data, -> { changed }) do
+      capture_io { refresh_dashboard }
+    end
+
+    assert_nil dashboard_status[:error]
+    refute load_grade_overrides.fetch("canvas").key?("10")
+    dashboard = request("/")
+    assert_includes dashboard.body, "Premature Grade"
+    assert_includes dashboard.body, "<strong>80%</strong>"
+    assert_equal [6, 10], combined_grade_submissions(
+      dashboard_data, load_grade_overrides
+    ).map { |submission| submission["score"] }
+  end
+
+  def test_hidden_assignment_can_be_restored_manually
+    saved = request("/grades", Net::HTTP::Post, "canvas_10_hidden" => "true")
+    assert_equal "303", saved.code
+    refute_includes request("/").body, ">Quiz<"
+
+    restored = request(
+      "/grades", Net::HTTP::Post,
+      "canvas_10_score" => "", "canvas_10_points" => ""
+    )
+
+    assert_equal "303", restored.code
+    refute load_grade_overrides.fetch("canvas").key?("10")
+    assert_includes request("/").body, "Quiz"
+  end
+
   def test_grade_route_adds_infinite_campus_only_assignment
     response = request(
       "/grades",
@@ -318,7 +393,7 @@ class AppRoutesTest < Minitest::Test
     save_grade_overrides(
       "canvas" => {
         "10" => { "score" => 9, "points_possible" => nil },
-        "20" => { "score" => 8, "points_possible" => nil }
+        "20" => { "score" => 8, "points_possible" => nil, "hidden" => true }
       },
       "custom" => {
         "math-grade" => {
@@ -364,6 +439,7 @@ class AppRoutesTest < Minitest::Test
     overrides = load_grade_overrides
     assert_equal 9.5, overrides.dig("canvas", "10", "score")
     assert_equal 8, overrides.dig("canvas", "20", "score")
+    assert_equal true, overrides.dig("canvas", "20", "hidden")
     assert overrides.fetch("custom").key?("science-grade")
   end
 

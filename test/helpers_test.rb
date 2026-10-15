@@ -18,6 +18,41 @@ class HelpersTest < Minitest::Test
     assert_equal "🌎", course_symbol("S1 G6 SS")
   end
 
+  def test_combined_grades_exclude_hidden_earned_and_possible_points
+    data = {
+      "courses" => [{ "id" => 1 }],
+      "grades" => [
+        { "assignment_id" => 10, "score" => 0,
+          "assignment" => { "id" => 10, "course_id" => 1, "points_possible" => 100 } },
+        { "assignment_id" => 11, "score" => 8,
+          "assignment" => { "id" => 11, "course_id" => 1, "points_possible" => 10 } }
+      ]
+    }
+    overrides = {
+      "canvas" => {
+        "10" => { "hidden" => true, "score" => 50, "points_possible" => 50 },
+        "11" => { "score" => 9 }
+      },
+      "custom" => {
+        "manual" => {
+          "course_id" => "1", "name" => "Manual Quiz",
+          "score" => 10, "points_possible" => 10, "graded_at" => "2026-10-14"
+        }
+      }
+    }
+    original = deep_copy(data)
+
+    grades = combined_grade_submissions(data, overrides)
+
+    assert_equal [11, "custom-manual"], grades.map { |grade| grade["assignment_id"] }
+    earned = grades.sum { |grade| grade["score"] }
+    possible = grades.sum { |grade| grade.dig("assignment", "points_possible") }
+    assert_equal 19, earned
+    assert_equal 20, possible
+    assert_equal 95, percentage(earned, possible)
+    assert_equal original, data
+  end
+
   def test_course_and_assignment_values_support_canvas_shapes
     data = { "course_names" => { "12" => "Science" } }
     nested = {

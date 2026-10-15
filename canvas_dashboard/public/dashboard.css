@@ -1564,6 +1564,25 @@ a:hover {
   border-top: 1px solid var(--border);
 }
 
+.assignment-grade-hide {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.assignment-grade-hide input {
+  width: auto;
+  min-height: auto;
+  margin: 0;
+  padding: 0;
+}
+
+.assignment-grade-row .assignment-grade-hide span {
+  margin-bottom: 0;
+}
+
 .custom-grade-row:not(.new-custom-grade) {
   grid-template-columns: minmax(180px, 1.5fr) minmax(150px, 1fr) 90px 90px 145px;
 }

@@ -99,6 +99,8 @@ Edits are stored in `/data/grade_overrides.json` for the Home Assistant add-on o
 
 When an overridden Canvas assignment receives a changed score, possible-points value, or grading timestamp from Canvas, the dashboard automatically removes that override on the next successful refresh. Infinite Campus-only assignments are retained because they have no corresponding Canvas assignment to update.
 
+For an incorrect or premature Canvas grade, select **Hide until Canvas updates** beside the assignment in the grade editor and save. The assignment is hidden from the dashboard's grade list, missing work, upcoming assignments, and daily digest, and neither its earned nor possible points count toward calculated course grades. It remains visible in the grade editor, marked **Hidden**, so you can uncheck it to restore it manually. Hidden status persists across restarts and unchanged refreshes. When Canvas changes the assignment's score, possible points, or grading timestamp, the next successful refresh clears its hidden status and any local grade edits, restores the assignment, and includes the latest Canvas grade in calculations. This does not change anything in Canvas.
+
 Infinite Campus offers stable automated grade access through district-managed OneRoster exports and APIs, not ordinary parent or student portal credentials. Unofficial portal clients exist but depend on reverse-engineered endpoints and stored login credentials, so the dashboard uses explicit local grades rather than an unreliable credential-based sync.
 
 ### 💾 Local Cache
@@ -398,7 +400,7 @@ Example:
 ```yaml
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.16.1"
+version: "0.17.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
