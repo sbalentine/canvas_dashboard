@@ -96,6 +96,7 @@ class AppRoutesTest < Minitest::Test
     chart = request("/chart.umd.min.js")
     navigation = request("/navigation.js")
     manifest = request("/manifest.json")
+    icon = request("/emberguide-icon.png")
     class_names = request("/settings/classes")
     grades = request("/settings/grades")
     scheduled_emails = request("/settings/emails")
@@ -120,6 +121,9 @@ class AppRoutesTest < Minitest::Test
     assert_equal "text/javascript; charset=utf-8", navigation["Content-Type"]
     assert_includes navigation.body, "dashboard-nav-toggle"
     assert_equal "EmberGuide", JSON.parse(manifest.body)["name"]
+    assert_equal "200", icon.code
+    assert_equal "image/png", icon["Content-Type"]
+    assert_operator icon.body.bytesize, :>, 0
     assert_equal "200", class_names.code
     assert_includes class_names.body, "Classes Outside Canvas"
     assert_equal "200", grades.code

@@ -132,6 +132,12 @@ class EmailBackupsTest < Minitest::Test
       "https://calendar.example.test/middle-school.ics",
       JSON.parse(entries["school_calendar_settings.json"])["feed_url"]
     )
+    assert_equal(
+      ["Elementary"],
+      JSON.parse(
+        entries["school_calendar_settings.json"]
+      )["excluded_keywords"]
+    )
     assert_equal 2, JSON.parse(entries["manifest.json"])["schema_version"]
   end
 
@@ -198,6 +204,10 @@ class EmailBackupsTest < Minitest::Test
     assert_equal(
       "https://calendar.example.test/school.ics",
       load_school_calendar_settings["feed_url"]
+    )
+    assert_equal(
+      ["Elementary"],
+      load_school_calendar_settings["excluded_keywords"]
     )
     assert_equal(
       ["backup@example.com"],

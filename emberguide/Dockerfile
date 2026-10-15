@@ -14,6 +14,7 @@ COPY app.rb /app/app.rb
 COPY lib /app/lib
 COPY views /app/views
 COPY public /app/public
+COPY icon.png /app/icon.png
 
 COPY run.sh /run.sh
 
