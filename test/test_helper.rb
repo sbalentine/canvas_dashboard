@@ -18,7 +18,7 @@ ENV["HIDDEN_COURSES_FILE"] = File.join(TEST_TMP_DIR, "hidden_courses.json")
 ENV["BACKUP_SETTINGS_FILE"] = File.join(TEST_TMP_DIR, "backup_settings.json")
 ENV["SCHOOL_CALENDAR_SETTINGS_FILE"] = File.join(TEST_TMP_DIR, "school_calendar_settings.json")
 
-require_relative "../canvas_dashboard/app"
+require_relative "../emberguide/app"
 
 Minitest.after_run do
   FileUtils.remove_entry(TEST_TMP_DIR) if File.exist?(TEST_TMP_DIR)

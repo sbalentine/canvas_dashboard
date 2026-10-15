@@ -235,7 +235,7 @@ def deliver_email_messages(sender:, password:, messages:)
   end
 end
 
-def send_school_dashboard_backup(recipients, now: Time.now)
+def send_emberguide_backup(recipients, now: Time.now)
   recipients = normalize_email_recipients(recipients)
   validate_recipient_list(recipients, label: "backup recipient", required: true)
 
@@ -785,7 +785,7 @@ def digest_email_message(sender:, recipient:, digest:, now:)
   ].join("\r\n")
 end
 
-def send_school_dashboard_digest(recipients, now: Time.now)
+def send_emberguide_digest(recipients, now: Time.now)
   recipients = normalize_email_recipients(recipients)
   validate_recipient_list(recipients, label: "digest recipient", required: true)
 
@@ -832,9 +832,9 @@ def send_scheduled_email_if_due(type, now = Time.now)
   recipients = settings["#{type}_recipients"]
 
   if type == :backup
-    send_school_dashboard_backup(recipients, now: now)
+    send_emberguide_backup(recipients, now: now)
   else
-    send_school_dashboard_digest(recipients, now: now)
+    send_emberguide_digest(recipients, now: now)
   end
 
   settings["last_#{type}_sent_on"] = now.to_date.iso8601

@@ -571,13 +571,13 @@ server.mount_proc "/settings/emails" do |request, response|
         response.body = ""
         next
       when "send_backup"
-        send_school_dashboard_backup(settings["backup_recipients"])
+        send_emberguide_backup(settings["backup_recipients"])
         response.status = 303
         response["Location"] = "/settings/emails?sent=backup"
         response.body = ""
         next
       when "send_digest"
-        send_school_dashboard_digest(settings["digest_recipients"])
+        send_emberguide_digest(settings["digest_recipients"])
         response.status = 303
         response["Location"] = "/settings/emails?sent=digest"
         response.body = ""

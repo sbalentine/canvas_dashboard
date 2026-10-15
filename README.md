@@ -170,7 +170,7 @@ Aliases are stored by Canvas course ID in `/data/course_name_mappings.json` for 
 
 The dashboard compares consecutive successful Canvas refreshes and keeps the latest 500 changes in `/data/event_journal.json`. The first refresh establishes a baseline and does not create events.
 
-When installed as a Home Assistant app, every change is also fired on Home Assistant's event bus as `school_dashboard_activity`. No REST sensor or YAML configuration is required. In **Settings → Automations & scenes**, create an automation with an **Event** trigger, enter `school_dashboard_activity` as the event type, and add a phone notification action.
+When installed as a Home Assistant app, every change is also fired on Home Assistant's event bus as `emberguide_activity`. No REST sensor or YAML configuration is required. In **Settings → Automations & scenes**, create an automation with an **Event** trigger, enter `emberguide_activity` as the event type, and add a phone notification action.
 
 Available event types are:
 
@@ -223,7 +223,7 @@ automation:
   - alias: School grade posted
     triggers:
       - trigger: state
-        entity_id: sensor.school_dashboard_event
+        entity_id: sensor.emberguide_event
     conditions:
       - condition: template
         value_template: >-
@@ -246,7 +246,7 @@ emberguide/
 ├── repository.yaml
 ├── run-local.sh
 ├── test/
-└── canvas_dashboard/
+└── emberguide/
   ├── app.rb
   ├── Dockerfile
   ├── config.yaml
@@ -257,27 +257,27 @@ emberguide/
   └── tmp/                # Local only; ignored by Git
 ```
 
-### `canvas_dashboard/app.rb`
+### `emberguide/app.rb`
 
 Starts the WEBrick web server and defines the dashboard, stylesheet, icon, and PWA manifest routes.
 
-### `canvas_dashboard/lib/canvas.rb`
+### `emberguide/lib/canvas.rb`
 
 Handles Canvas configuration, authentication, API requests, and token expiration.
 
-### `canvas_dashboard/lib/dashboard_data.rb`
+### `emberguide/lib/dashboard_data.rb`
 
 Retrieves Canvas data, builds the dashboard data model, caches successful responses, and manages the background refresh process.
 
-### `canvas_dashboard/lib/helpers.rb`
+### `emberguide/lib/helpers.rb`
 
 Contains presentation and assignment helpers such as date formatting, score formatting, course names, and submission status.
 
-### `canvas_dashboard/views/dashboard.erb`
+### `emberguide/views/dashboard.erb`
 
 The HTML/ERB dashboard interface.
 
-### `canvas_dashboard/public/dashboard.css`
+### `emberguide/public/dashboard.css`
 
 Dashboard styling and responsive layout.
 
@@ -375,7 +375,7 @@ The first launch may briefly display a waiting message while the initial Canvas 
 After a successful refresh, local cached data is stored at:
 
 ```text
-canvas_dashboard/tmp/canvas_cache.json
+emberguide/tmp/canvas_cache.json
 ```
 
 The `tmp` directory is ignored by Git.
@@ -395,7 +395,7 @@ This is particularly useful when Home Assistant OS is running on an always-on Ra
 3. Add this repository URL:
 
 ```text
-https://github.com/sbalentine/canvas_dashboard
+https://github.com/sbalentine/emberguide
 ```
 
 4. Refresh the app store and select **EmberGuide**.
@@ -412,8 +412,8 @@ Example:
 ```yaml
 name: "EmberGuide"
 description: "A clear, family-friendly guide to Canvas coursework"
-version: "0.20.0"
-url: "https://github.com/sbalentine/canvas_dashboard"
+version: "0.20.1"
+url: "https://github.com/sbalentine/emberguide"
 slug: "canvas_dashboard"
 init: false
 
@@ -587,10 +587,10 @@ http://localhost:4567
 Check Ruby syntax:
 
 ```bash
-ruby -c canvas_dashboard/app.rb
-ruby -c canvas_dashboard/lib/canvas.rb
-ruby -c canvas_dashboard/lib/helpers.rb
-ruby -c canvas_dashboard/lib/dashboard_data.rb
+ruby -c emberguide/app.rb
+ruby -c emberguide/lib/canvas.rb
+ruby -c emberguide/lib/helpers.rb
+ruby -c emberguide/lib/dashboard_data.rb
 ```
 
 Then commit:
@@ -601,7 +601,7 @@ git commit -m "Describe the change"
 git push
 ```
 
-Once the changes are working locally, increase the version in `canvas_dashboard/config.yaml` and push the changes. Home Assistant will then offer the new version as an update.
+Once the changes are working locally, increase the version in `emberguide/config.yaml` and push the changes. Home Assistant will then offer the new version as an update.
 
 ---
 

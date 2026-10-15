@@ -156,7 +156,7 @@ class EmailBackupsTest < Minitest::Test
       :deliver_email_messages,
       ->(**arguments) { delivery = arguments }
     ) do
-      send_school_dashboard_backup(
+      send_emberguide_backup(
         ["one@example.com", "two@example.com"],
         now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
       )
@@ -331,7 +331,7 @@ class EmailBackupsTest < Minitest::Test
       :deliver_email_messages,
       ->(**arguments) { delivery = arguments }
     ) do
-      count = send_school_dashboard_digest(
+      count = send_emberguide_digest(
         ["one@example.com", "two@example.com"],
         now: Time.new(2026, 10, 11, 6, 0, 0, "-07:00")
       )
@@ -360,12 +360,12 @@ class EmailBackupsTest < Minitest::Test
 
     with_replaced_method(
       self,
-      :send_school_dashboard_backup,
+      :send_emberguide_backup,
       ->(recipients, now:) { sends << [:backup, recipients, now.hour] }
     ) do
       with_replaced_method(
         self,
-        :send_school_dashboard_digest,
+        :send_emberguide_digest,
         ->(recipients, now:) { sends << [:digest, recipients, now.hour] }
       ) do
         at_three = Time.new(2026, 10, 11, 3, 5, 0, "-07:00")
@@ -396,7 +396,7 @@ class EmailBackupsTest < Minitest::Test
 
     with_replaced_method(
       self,
-      :send_school_dashboard_digest,
+      :send_emberguide_digest,
       lambda do |_recipients, now:|
         attempts += 1
         raise "SMTP unavailable"

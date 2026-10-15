@@ -6,7 +6,7 @@ HOME_ASSISTANT_API_URL = ENV.fetch(
   "HOME_ASSISTANT_API_URL",
   "http://supervisor/core/api"
 )
-HOME_ASSISTANT_EVENT_TYPE = "school_dashboard_activity"
+HOME_ASSISTANT_EVENT_TYPE = "emberguide_activity"
 
 def home_assistant_http_request(uri, request)
   Net::HTTP.start(

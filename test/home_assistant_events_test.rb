@@ -25,7 +25,7 @@ class HomeAssistantEventsTest < Minitest::Test
     end
 
     assert_equal(
-      "http://supervisor/core/api/events/school_dashboard_activity",
+      "http://supervisor/core/api/events/emberguide_activity",
       request_details[:uri]
     )
     assert_equal "Bearer secret", request_details[:authorization]

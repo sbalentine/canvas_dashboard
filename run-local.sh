@@ -18,4 +18,4 @@ set -a
 . ./.env
 set +a
 
-exec ruby canvas_dashboard/app.rb
+exec ruby emberguide/app.rb
