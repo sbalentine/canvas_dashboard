@@ -18,4 +18,4 @@ set -a
 . ./.env
 set +a
 
-exec ruby emberguide/app.rb
+exec ruby emberguide/app.rb "$@"

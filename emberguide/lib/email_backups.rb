@@ -22,10 +22,16 @@ BACKUP_SETTINGS_FILE =
 
 BACKUP_SEND_HOUR = 3
 DIGEST_SEND_HOUR = 6
+BACKUP_SCHEMA_VERSION = 2
+BACKUP_MAX_ARCHIVE_BYTES = 25 * 1024 * 1024
+BACKUP_MAX_ENTRY_BYTES = 10 * 1024 * 1024
+BACKUP_MAX_TOTAL_BYTES = 25 * 1024 * 1024
 $email_send_mutex = Mutex.new
+$backup_restore_mutex = Mutex.new
 $scheduled_email_attempts = {}
 
 class EmailConfigurationError < StandardError; end
+class BackupRestoreError < StandardError; end
 
 def empty_scheduled_email_settings
   {
@@ -151,11 +157,13 @@ def backup_payloads(now: Time.now)
     "course_name_mappings.json" => backup_json(load_course_name_mappings),
     "hidden_courses.json" => backup_json(load_hidden_course_ids),
     "event_journal.json" => backup_json(journal),
-    "backup_settings.json" => backup_json(settings)
+    "backup_settings.json" => backup_json(settings),
+    "school_calendar_settings.json" =>
+      backup_json(load_school_calendar_settings)
   }
 
   manifest = {
-    "schema_version" => 1,
+    "schema_version" => BACKUP_SCHEMA_VERSION,
     "created_at" => now.iso8601,
     "files" => payloads.transform_values do |content|
       {
@@ -181,6 +189,202 @@ end
 
 def backup_archive_filename(now)
   "emberguide-backup-#{now.strftime("%Y-%m-%d-%H%M%S")}.zip"
+end
+
+def backup_restore_paths
+  {
+    "canvas_cache.json" => CACHE_FILE,
+    "manual_coursework.json" => MANUAL_COURSEWORK_FILE,
+    "grade_overrides.json" => GRADE_OVERRIDES_FILE,
+    "course_name_mappings.json" => COURSE_NAME_MAPPINGS_FILE,
+    "hidden_courses.json" => HIDDEN_COURSES_FILE,
+    "event_journal.json" => EVENT_JOURNAL_FILE,
+    "backup_settings.json" => BACKUP_SETTINGS_FILE,
+    "school_calendar_settings.json" => SCHOOL_CALENDAR_SETTINGS_FILE
+  }
+end
+
+def validate_backup_json(filename, value)
+  valid =
+    case filename
+    when "canvas_cache.json", "course_name_mappings.json"
+      value.is_a?(Hash)
+    when "manual_coursework.json"
+      value.is_a?(Hash) &&
+        value["courses"].is_a?(Hash) &&
+        value["assignments"].is_a?(Hash)
+    when "grade_overrides.json"
+      value.is_a?(Hash) &&
+        value.fetch("canvas", {}).is_a?(Hash) &&
+        value.fetch("custom", {}).is_a?(Hash)
+    when "hidden_courses.json"
+      value.is_a?(Array)
+    when "event_journal.json"
+      value.is_a?(Hash) &&
+        value["next_id"].is_a?(Integer) &&
+        value["events"].is_a?(Array)
+    when "backup_settings.json"
+      value.is_a?(Hash)
+    when "school_calendar_settings.json"
+      value.is_a?(Hash) &&
+        value.fetch("feed_url", "").is_a?(String) &&
+        value.fetch("excluded_keywords", []).is_a?(Array)
+    else
+      false
+    end
+
+  raise BackupRestoreError, "Invalid data in #{filename}." unless valid
+end
+
+def backup_entries(archive)
+  if archive.nil? || archive.empty?
+    raise BackupRestoreError, "Choose an EmberGuide backup ZIP file."
+  end
+  if archive.bytesize > BACKUP_MAX_ARCHIVE_BYTES
+    raise BackupRestoreError, "The backup ZIP is larger than 25 MB."
+  end
+
+  entries = {}
+  total_bytes = 0
+
+  Zip::File.open_buffer(archive) do |zip|
+    zip.each do |entry|
+      name = entry.name
+      if entries.key?(name)
+        raise BackupRestoreError, "The backup contains duplicate files."
+      end
+      unless name == "manifest.json" || backup_restore_paths.key?(name)
+        raise BackupRestoreError, "The backup contains an unsupported file: #{name}."
+      end
+      if entry.directory? || entry.size > BACKUP_MAX_ENTRY_BYTES
+        raise BackupRestoreError, "The backup contains an invalid file: #{name}."
+      end
+
+      content = entry.get_input_stream.read(BACKUP_MAX_ENTRY_BYTES + 1)
+      if content.bytesize > BACKUP_MAX_ENTRY_BYTES
+        raise BackupRestoreError, "The backup file #{name} is too large."
+      end
+
+      total_bytes += content.bytesize
+      if total_bytes > BACKUP_MAX_TOTAL_BYTES
+        raise BackupRestoreError, "The backup expands beyond 25 MB."
+      end
+
+      entries[name] = content
+    end
+  end
+
+  entries
+rescue Zip::Error
+  raise BackupRestoreError, "The selected file is not a valid backup ZIP."
+end
+
+def validated_backup_payloads(archive)
+  entries = backup_entries(archive)
+  manifest_content = entries.delete("manifest.json")
+  raise BackupRestoreError, "The backup manifest is missing." unless manifest_content
+
+  manifest = JSON.parse(manifest_content)
+  schema_version = manifest["schema_version"]
+  unless [1, BACKUP_SCHEMA_VERSION].include?(schema_version)
+    raise BackupRestoreError, "This backup version is not supported."
+  end
+  Time.iso8601(manifest.fetch("created_at"))
+
+  expected_files =
+    if schema_version == 1
+      backup_restore_paths.keys - ["school_calendar_settings.json"]
+    else
+      backup_restore_paths.keys
+    end
+  unless entries.keys.sort == expected_files.sort
+    raise BackupRestoreError, "The backup file list is incomplete or invalid."
+  end
+
+  manifest_files = manifest["files"]
+  unless manifest_files.is_a?(Hash) &&
+      manifest_files.keys.sort == entries.keys.sort
+    raise BackupRestoreError, "The backup manifest does not match its files."
+  end
+
+  entries.to_h do |filename, content|
+    metadata = manifest_files[filename]
+    unless metadata.is_a?(Hash) &&
+        metadata["bytes"] == content.bytesize &&
+        metadata["sha256"] == Digest::SHA256.hexdigest(content)
+      raise BackupRestoreError, "Backup verification failed for #{filename}."
+    end
+
+    value = JSON.parse(content)
+    validate_backup_json(filename, value)
+    [filename, { content: content, value: value }]
+  end
+rescue JSON::ParserError, KeyError, ArgumentError
+  raise BackupRestoreError, "The backup manifest or data is invalid."
+end
+
+def write_restored_payloads(payloads)
+  originals = {}
+  temporary_files = {}
+
+  payloads.each do |filename, payload|
+    path = backup_restore_paths.fetch(filename)
+    FileUtils.mkdir_p(File.dirname(path))
+    originals[path] = File.exist?(path) ? File.binread(path) : nil
+    temporary_path = "#{path}.restore.#{$$}"
+    File.binwrite(temporary_path, payload.fetch(:content))
+    temporary_files[path] = temporary_path
+  end
+
+  temporary_files.each do |path, temporary_path|
+    File.rename(temporary_path, path)
+  end
+rescue SystemCallError
+  originals.each do |path, content|
+    if content
+      File.binwrite(path, content)
+    else
+      FileUtils.rm_f(path)
+    end
+  end
+  raise BackupRestoreError, "Unable to write the restored backup."
+ensure
+  temporary_files&.each_value { |path| FileUtils.rm_f(path) }
+end
+
+def apply_restored_runtime_state(payloads)
+  if (cache = payloads.dig("canvas_cache.json", :value))
+    $data_mutex.synchronize do
+      $dashboard_data = cache.empty? ? nil : cache
+      $last_successful_update =
+        begin
+          Time.parse(cache["updated_at"].to_s)
+        rescue ArgumentError
+          nil
+        end
+      $last_refresh_error = nil
+    end
+  end
+
+  if (journal = payloads.dig("event_journal.json", :value))
+    $event_journal_mutex.synchronize { $event_journal = journal }
+  end
+
+  $school_calendar_mutex.synchronize { $school_calendar_cache = nil }
+  $scheduled_email_attempts = {}
+end
+
+def restore_backup_archive(archive)
+  payloads = validated_backup_payloads(archive)
+
+  $backup_restore_mutex.synchronize do
+    $refresh_mutex.synchronize do
+      write_restored_payloads(payloads)
+      apply_restored_runtime_state(payloads)
+    end
+  end
+
+  payloads.keys.sort
 end
 
 def gmail_email_configuration

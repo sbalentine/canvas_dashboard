@@ -2,7 +2,7 @@ name: "EmberGuide"
 description: "A clear, family-friendly guide to Canvas coursework"
 version: "1.0.0"
 url: "https://github.com/sbalentine/emberguide"
-slug: "canvas_dashboard"
+slug: "emberguide"
 init: false
 homeassistant_api: true
 arch:

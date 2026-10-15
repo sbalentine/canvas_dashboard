@@ -2233,9 +2233,26 @@ a:hover {
   gap: 16px;
 }
 
-.scheduled-email-card h2 {
+.scheduled-email-card h2,
+.scheduled-email-card h3 {
   margin: 0;
   font-size: 21px;
+}
+
+.data-transfer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.data-transfer-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.data-transfer-card .scheduled-email-card-actions {
+  margin-top: auto;
+  padding-top: 18px;
 }
 
 .scheduled-email-card > label > span {
@@ -2628,6 +2645,10 @@ a:hover {
   .scheduled-email-card-actions {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .data-transfer-grid {
+    grid-template-columns: 1fr;
   }
 
   .scheduled-email-card-actions .scheduled-email-send-button,

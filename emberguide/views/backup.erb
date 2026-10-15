@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#080711">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Data Backup</title>
+</head>
+
+<body>
+  <main class="container settings-page backup-settings-page">
+    <%
+      navigation_active = "settings"
+    %>
+    <%= render_partial("navigation", binding) %>
+
+    <header class="settings-header">
+      <div>
+        <h1>Data Backup</h1>
+        <div class="subtitle">
+          Export or restore dashboard data and local settings.
+        </div>
+      </div>
+    </header>
+
+    <% if restore_error %>
+      <div class="backup-message error" role="alert">
+        <strong>Backup not restored.</strong>
+        <%= h restore_error %>
+      </div>
+    <% elsif request.query["restored"] == "1" %>
+      <div class="backup-message success" role="status">
+        <strong>Backup restored.</strong>
+        EmberGuide data and local settings were imported successfully.
+      </div>
+    <% end %>
+
+    <div class="data-transfer-grid">
+      <section class="card scheduled-email-card data-transfer-card">
+        <h2>Export Data</h2>
+        <p class="settings-intro">
+          Download a ZIP containing Canvas data, dashboard edits, and local settings.
+          Canvas and Gmail credentials are never included.
+        </p>
+
+        <div class="scheduled-email-card-actions">
+          <a
+            class="scheduled-email-secondary-link"
+            href="/settings/backup/download"
+            download
+          >
+            Download Backup
+          </a>
+        </div>
+      </section>
+
+      <section class="card scheduled-email-card data-transfer-card">
+        <h2>Import Data</h2>
+        <p class="settings-intro">
+          Restore an EmberGuide backup after reinstalling or moving to a new app identity.
+          Canvas and Gmail credentials are never restored.
+        </p>
+
+        <form
+          class="scheduled-email-settings"
+          method="post"
+          action="/settings/backup"
+          enctype="multipart/form-data"
+        >
+          <label>
+            <span>Backup ZIP</span>
+            <input
+              type="file"
+              name="backup_file"
+              accept=".zip,application/zip"
+              required
+            >
+          </label>
+
+          <label class="backup-daily-field">
+            <input
+              type="checkbox"
+              name="confirm_restore"
+              value="true"
+              required
+            >
+            <span>
+              <strong>Replace current EmberGuide data</strong>
+              <small>Existing dashboard data and local settings will be overwritten.</small>
+            </span>
+          </label>
+
+          <div class="scheduled-email-card-actions">
+            <button
+              class="scheduled-email-send-button"
+              type="submit"
+              name="action"
+              value="restore_backup"
+            >
+              Restore Backup
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

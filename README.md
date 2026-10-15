@@ -179,7 +179,7 @@ name: "EmberGuide"
 description: "A clear, family-friendly guide to Canvas coursework"
 version: "1.0.0"
 url: "https://github.com/sbalentine/emberguide"
-slug: "canvas_dashboard"
+slug: "emberguide"
 init: false
 
 arch:
@@ -412,6 +412,11 @@ scheduled for 6:00 AM local time. Backups can be downloaded directly, emailed
 on demand, or scheduled for 3:00 AM. Backup archives never include
 `/data/options.json`, Canvas tokens, or Gmail credentials.
 
+Use **Restore Backup** under **Settings → Data Backup** to validate and import a
+downloaded ZIP.
+EmberGuide verifies the archive manifest, checksums, file list, and JSON data
+before replacing any local state.
+
 ---
 
 # Canvas API
@@ -482,6 +487,13 @@ Make changes and test at:
 
 ```text
 http://localhost:4567
+```
+
+To inspect existing local data without automatic Canvas refreshes or scheduled
+email delivery, run the app directly with background workers disabled:
+
+```bash
+./run-local.sh --no-background
 ```
 
 Check Ruby syntax:

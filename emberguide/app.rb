@@ -5,6 +5,7 @@ require "securerandom"
 
 APP_ROOT = File.expand_path(__dir__)
 DEMO_MODE = ARGV.delete("--demo")
+NO_BACKGROUND_MODE = ARGV.delete("--no-background")
 
 if DEMO_MODE
   require_relative "lib/demo_data"
@@ -37,11 +38,20 @@ require_relative "lib/school_calendar"
 # ============================================================
 
 if $PROGRAM_NAME == __FILE__
-  puts "Starting EmberGuide#{DEMO_MODE ? " in demo mode" : ""}..."
+  mode =
+    if DEMO_MODE
+      " in demo mode"
+    elsif NO_BACKGROUND_MODE
+      " without background workers"
+    else
+      ""
+    end
+
+  puts "Starting EmberGuide#{mode}..."
 
   initialize_dashboard_data
   initialize_event_journal
-  unless DEMO_MODE
+  unless DEMO_MODE || NO_BACKGROUND_MODE
     start_refresh_thread
     start_scheduled_email_thread
   end
@@ -552,7 +562,7 @@ rescue => e
   response.body = "Unable to generate the daily digest preview."
 end
 
-server.mount_proc "/settings/emails/backup-download" do |request, response|
+server.mount_proc "/settings/backup/download" do |request, response|
   unless %w[GET HEAD].include?(request.request_method)
     response.status = 405
     response["Allow"] = "GET, HEAD"
@@ -575,6 +585,59 @@ rescue => e
   response.status = 500
   response["Content-Type"] = "text/plain; charset=utf-8"
   response.body = "Unable to generate the dashboard backup."
+end
+
+server.mount_proc "/settings/emails/backup-download" do |_request, response|
+  response.status = 303
+  response["Location"] = "/settings/backup/download"
+  response.body = ""
+end
+
+server.mount_proc "/settings/backup" do |request, response|
+  restore_error = nil
+
+  if request.request_method == "POST"
+    begin
+      unless request.query["action"] == "restore_backup"
+        raise BackupRestoreError, "Invalid backup action."
+      end
+
+      unless request.query["confirm_restore"] == "true"
+        raise BackupRestoreError,
+          "Confirm that you want to replace the current EmberGuide data."
+      end
+
+      upload = request.query["backup_file"]
+      restore_backup_archive(upload.to_s)
+      response.status = 303
+      response["Location"] = "/settings/backup?restored=1"
+      response.body = ""
+      next
+    rescue BackupRestoreError => e
+      restore_error = e.message
+      response.status = 422
+    end
+  elsif request.request_method != "GET"
+    response.status = 405
+    response["Allow"] = "GET, POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  template = ERB.new(
+    File.read(File.join(APP_ROOT, "views", "backup.erb"))
+  )
+
+  response.status = 200 if request.request_method == "GET"
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Data backup settings error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load data backup settings."
 end
 
 server.mount_proc "/settings/emails" do |request, response|

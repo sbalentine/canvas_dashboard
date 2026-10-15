@@ -8,6 +8,8 @@ class EmailBackupsTest < Minitest::Test
     FileUtils.rm_f(COURSE_NAME_MAPPINGS_FILE)
     FileUtils.rm_f(HIDDEN_COURSES_FILE)
     FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
+    FileUtils.rm_f(CACHE_FILE)
+    FileUtils.rm_f(EVENT_JOURNAL_FILE)
     ENV["GMAIL_SENDER"] = ""
     ENV["GMAIL_APP_PASSWORD"] = ""
     $dashboard_data = base_data
@@ -94,6 +96,10 @@ class EmailBackupsTest < Minitest::Test
         "digest_recipients" => ["digest@example.com"]
       )
     )
+    save_school_calendar_settings(
+      "https://calendar.example.test/middle-school.ics",
+      "Elementary"
+    )
 
     archive = build_backup_archive(
       now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
@@ -112,6 +118,7 @@ class EmailBackupsTest < Minitest::Test
       hidden_courses.json
       manifest.json
       manual_coursework.json
+      school_calendar_settings.json
     ]
     assert_equal expected_files, entries.keys.sort
     assert_equal "Piano", JSON.parse(entries["manual_coursework.json"]).dig(
@@ -121,6 +128,131 @@ class EmailBackupsTest < Minitest::Test
     )
     refute_includes archive, "test-token"
     refute entries.key?("options.json")
+    assert_equal(
+      "https://calendar.example.test/middle-school.ics",
+      JSON.parse(entries["school_calendar_settings.json"])["feed_url"]
+    )
+    assert_equal 2, JSON.parse(entries["manifest.json"])["schema_version"]
+  end
+
+  def test_backup_restore_round_trip_restores_local_state
+    $dashboard_data = base_data.merge(
+      "updated_at" => "2026-10-11T03:00:00-07:00"
+    )
+    save_manual_coursework(
+      "courses" => { "music" => { "name" => "Music" } },
+      "assignments" => {}
+    )
+    save_grade_overrides(
+      "canvas" => {},
+      "custom" => {
+        "concert" => {
+          "course_id" => "manual-music",
+          "name" => "Concert",
+          "score" => 19,
+          "points_possible" => 20,
+          "graded_at" => "2026-10-10"
+        }
+      }
+    )
+    save_course_name_mappings("1" => "Algebra")
+    save_hidden_course_ids(["2"])
+    save_school_calendar_settings(
+      "https://calendar.example.test/school.ics",
+      "Elementary"
+    )
+    save_scheduled_email_settings(
+      scheduled_settings(
+        "backup_recipients" => ["backup@example.com"],
+        "digest_recipients" => ["digest@example.com"]
+      )
+    )
+    $event_journal = {
+      "next_id" => 2,
+      "events" => [{ "id" => 1, "type" => "grade_posted" }]
+    }
+
+    archive = build_backup_archive(
+      now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
+    )
+
+    save_manual_coursework(empty_manual_coursework)
+    save_grade_overrides("canvas" => {}, "custom" => {})
+    save_course_name_mappings({})
+    save_hidden_course_ids([])
+    save_school_calendar_settings("")
+    save_scheduled_email_settings(empty_scheduled_email_settings)
+    $dashboard_data = base_data
+    $event_journal = { "next_id" => 1, "events" => [] }
+
+    restored = restore_backup_archive(archive)
+
+    assert_includes restored, "school_calendar_settings.json"
+    assert_equal "Music", load_manual_coursework.dig(
+      "courses",
+      "music",
+      "name"
+    )
+    assert_equal "Algebra", load_course_name_mappings["1"]
+    assert_equal ["2"], load_hidden_course_ids
+    assert_equal(
+      "https://calendar.example.test/school.ics",
+      load_school_calendar_settings["feed_url"]
+    )
+    assert_equal(
+      ["backup@example.com"],
+      load_scheduled_email_settings["backup_recipients"]
+    )
+    assert_equal 2, $event_journal["next_id"]
+    assert_equal "2026-10-11T03:00:00-07:00",
+      $dashboard_data["updated_at"]
+  end
+
+  def test_backup_restore_rejects_checksum_mismatch
+    entries = backup_archive_entries(build_backup_archive)
+    entries["manual_coursework.json"] = backup_json(
+      "courses" => { "changed" => { "name" => "Changed" } },
+      "assignments" => {}
+    )
+
+    error = assert_raises(BackupRestoreError) do
+      restore_backup_archive(backup_archive_from_entries(entries))
+    end
+
+    assert_includes error.message, "verification failed"
+  end
+
+  def test_backup_restore_accepts_schema_one_without_calendar_settings
+    entries = backup_archive_entries(build_backup_archive)
+    entries.delete("school_calendar_settings.json")
+    manifest = JSON.parse(entries["manifest.json"])
+    manifest["schema_version"] = 1
+    manifest["files"].delete("school_calendar_settings.json")
+    entries["manifest.json"] = backup_json(manifest)
+    save_school_calendar_settings(
+      "https://calendar.example.test/current.ics"
+    )
+
+    restored = restore_backup_archive(
+      backup_archive_from_entries(entries)
+    )
+
+    refute_includes restored, "school_calendar_settings.json"
+    assert_equal(
+      "https://calendar.example.test/current.ics",
+      load_school_calendar_settings["feed_url"]
+    )
+  end
+
+  def test_backup_restore_rejects_secret_files
+    entries = backup_archive_entries(build_backup_archive)
+    entries["options.json"] = JSON.generate("canvas_token" => "secret")
+
+    error = assert_raises(BackupRestoreError) do
+      restore_backup_archive(backup_archive_from_entries(entries))
+    end
+
+    assert_includes error.message, "unsupported file"
   end
 
   def test_backup_email_has_requested_subject_and_only_attachment
@@ -444,5 +576,20 @@ class EmailBackupsTest < Minitest::Test
         "due_at" => due_at
       }
     }
+  end
+
+  def backup_archive_entries(archive)
+    Zip::File.open_buffer(archive).to_h do |entry|
+      [entry.name, entry.get_input_stream.read]
+    end
+  end
+
+  def backup_archive_from_entries(entries)
+    Zip::OutputStream.write_buffer do |archive|
+      entries.each do |filename, content|
+        archive.put_next_entry(filename)
+        archive.write(content)
+      end
+    end.string
   end
 end

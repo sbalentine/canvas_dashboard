@@ -25,7 +25,7 @@
       <div>
         <h1>Scheduled Emails</h1>
         <div class="subtitle">
-          Configure data backups and daily school summaries.
+          Configure backup deliveries and daily school summaries.
         </div>
       </div>
 
@@ -62,9 +62,9 @@
 
     <form class="scheduled-email-settings" method="post" action="/settings/emails">
       <section class="card scheduled-email-card">
-        <h2>Data Backup</h2>
+        <h2>Backup Email</h2>
         <p class="settings-intro">
-          Sends an in-memory ZIP of Canvas data and dashboard edits. No backup file is retained.
+          Emails an in-memory ZIP of Canvas data and dashboard edits. No backup file is retained.
         </p>
 
         <label>
@@ -92,18 +92,11 @@
 
         <p class="settings-help">
           Includes the Canvas cache, manual coursework, grade edits, class settings,
-          hidden classes, activity history, and scheduled email preferences. Credentials
-          are never included.
+          hidden classes, calendar settings, activity history, and scheduled email
+          preferences. Canvas tokens and Gmail credentials are never included.
         </p>
 
         <div class="scheduled-email-card-actions">
-          <a
-            class="scheduled-email-secondary-link"
-            href="/settings/emails/backup-download"
-            download
-          >
-            Download Backup
-          </a>
           <button
             class="scheduled-email-send-button backup-now-button"
             type="submit"

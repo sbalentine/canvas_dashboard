@@ -59,6 +59,37 @@ class AppRoutesTest < Minitest::Test
     end
   end
 
+  def multipart_request(path, fields:, filename:, content:)
+    boundary = "emberguide-test-#{SecureRandom.hex(8)}"
+    parts = fields.map do |name, value|
+      <<~PART.gsub("\n", "\r\n")
+        --#{boundary}
+        Content-Disposition: form-data; name="#{name}"
+
+        #{value}
+      PART
+    end
+    parts << [
+      "--#{boundary}\r\n",
+      "Content-Disposition: form-data; name=\"backup_file\"; " \
+        "filename=\"#{filename}\"\r\n",
+      "Content-Type: application/zip\r\n\r\n",
+      content,
+      "\r\n"
+    ].join
+    body = "#{parts.join}--#{boundary}--\r\n"
+
+    uri = URI(
+      "http://127.0.0.1:#{DASHBOARD_TEST_PORT}#{path}"
+    )
+    Net::HTTP.start(uri.hostname, uri.port) do |http|
+      request = Net::HTTP::Post.new(uri)
+      request["Content-Type"] = "multipart/form-data; boundary=#{boundary}"
+      request.body = body
+      http.request(request)
+    end
+  end
+
   def test_dashboard_and_static_routes
     dashboard = request("/")
     stylesheet = request("/dashboard.css")
@@ -68,11 +99,13 @@ class AppRoutesTest < Minitest::Test
     class_names = request("/settings/classes")
     grades = request("/settings/grades")
     scheduled_emails = request("/settings/emails")
+    backup_settings = request("/settings/backup")
     settings = request("/settings")
     calendar = request("/calendar")
     calendar_settings = request("/settings/calendar")
     digest_preview = request("/settings/emails/digest-preview")
-    backup_download = request("/settings/emails/backup-download")
+    backup_download = request("/settings/backup/download")
+    old_backup_download = request("/settings/emails/backup-download")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
@@ -93,12 +126,22 @@ class AppRoutesTest < Minitest::Test
     assert_includes grades.body, "Edit Assignment Grades"
     assert_equal "200", scheduled_emails.code
     assert_includes scheduled_emails.body, "Scheduled Emails"
+    assert_includes scheduled_emails.body, "Backup Email"
     assert_includes scheduled_emails.body, "Preview Daily Digest"
-    assert_includes scheduled_emails.body, "Download Backup"
+    refute_includes scheduled_emails.body, "Download Backup"
+    refute_includes scheduled_emails.body, "Restore Backup"
+    assert_equal "200", backup_settings.code
+    assert_includes backup_settings.body, "<title>Data Backup</title>"
+    assert_includes backup_settings.body, "Export Data"
+    assert_includes backup_settings.body, "Download Backup"
+    assert_includes backup_settings.body, "Import Data"
+    assert_includes backup_settings.body, "Restore Backup"
+    assert_includes backup_settings.body, 'class="is-active" href="/settings"'
     assert_equal "200", settings.code
     assert_includes settings.body, "<title>Settings</title>"
     assert_includes settings.body, 'rel="stylesheet"'
     assert_includes settings.body, "Scheduled Emails"
+    assert_includes settings.body, 'href="/settings/backup"'
     assert_includes settings.body, 'href="/settings/calendar"'
     refute_includes settings.body, "Manual Coursework"
     refute_includes settings.body, "District Calendar"
@@ -126,6 +169,43 @@ class AppRoutesTest < Minitest::Test
     )
     assert_equal "no-store", backup_download["Cache-Control"]
     assert_equal backup_download.body.bytesize.to_s, backup_download["Content-Length"]
+    assert_equal "303", old_backup_download.code
+    assert_equal(
+      "/settings/backup/download",
+      URI(old_backup_download["Location"]).request_uri
+    )
+  end
+
+  def test_backup_restore_upload_imports_data
+    save_manual_coursework(
+      "courses" => {
+        "restored" => { "name" => "Restored Music" }
+      },
+      "assignments" => {}
+    )
+    archive = build_backup_archive
+    save_manual_coursework(empty_manual_coursework)
+
+    response = multipart_request(
+      "/settings/backup",
+      fields: {
+        "action" => "restore_backup",
+        "confirm_restore" => "true"
+      },
+      filename: "emberguide-backup.zip",
+      content: archive
+    )
+
+    assert_equal "303", response.code
+    assert_equal(
+      "/settings/backup?restored=1",
+      URI(response["Location"]).request_uri
+    )
+    assert_equal "Restored Music", load_manual_coursework.dig(
+      "courses",
+      "restored",
+      "name"
+    )
   end
 
   def test_calendar_settings_route_saves_feed_without_exposing_it_on_dashboard
