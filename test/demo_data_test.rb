@@ -85,6 +85,17 @@ class DemoDataTest < Minitest::Test
     assert_equal [[8, 0], [15, 15], [8, 0]], due_times.map { |due| [due.hour, due.min] }
     assert_equal 3, upcoming.map { |event| event.dig("assignment", "course_id") }.uniq.length
     assert_equal 3, cache.fetch("todo").length
+
+    manual_coursework = JSON.parse(
+      File.read(File.join(DEMO_DIR, "manual_coursework.json"))
+    )
+    assert_equal ["Music"],
+      manual_coursework.fetch("courses").values.map { |course| course["name"] }
+    assert_equal 2, manual_coursework.fetch("assignments").length
+    assert_equal [false, true],
+      manual_coursework.fetch("assignments").values
+        .map { |assignment| assignment["completed"] }
+        .sort_by(&:to_s)
   end
 
   def test_prepare_runtime_shifts_dates_and_isolates_writable_files

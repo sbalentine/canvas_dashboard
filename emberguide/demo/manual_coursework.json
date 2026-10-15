@@ -2,8 +2,23 @@
   "courses": {
     "demo-course-1": {
       "name": "Music",
-      "updated_at": "2026-10-11T18:42:51-07:00"
+      "updated_at": "2026-10-14T22:09:58-07:00"
     }
   },
-  "assignments": {}
+  "assignments": {
+    "demo-assignment-1": {
+      "course_id": "demo-course-1",
+      "name": "Listening Journal · Film Score",
+      "due_at": "2026-10-12T18:00:00-07:00",
+      "completed": true,
+      "updated_at": "2026-10-14T22:09:58-07:00"
+    },
+    "demo-assignment-2": {
+      "course_id": "demo-course-1",
+      "name": "Practice C Major Scale",
+      "due_at": "2026-10-20T17:00:00-07:00",
+      "completed": false,
+      "updated_at": "2026-10-14T22:09:58-07:00"
+    }
+  }
 }

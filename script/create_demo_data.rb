@@ -168,37 +168,33 @@ class Anonymizer
     { "canvas" => {}, "custom" => custom }
   end
 
-  def manual_coursework(source)
-    courses = {}
-    course_ids = {}
+  def manual_coursework(_source)
+    course_id = "demo-course-1"
 
-    Hash(source.fetch("courses", {})).values.each_with_index do |course, index|
-      id = "demo-course-#{index + 1}"
-      course_ids[index] = id
-      courses[id] = {
+    {
+      "courses" => {
+        course_id => {
         "name" => "Music",
-        "updated_at" => course["updated_at"]
+          "updated_at" => @cache.fetch("updated_at")
+        }
+      },
+      "assignments" => {
+        "demo-assignment-1" => {
+          "course_id" => course_id,
+          "name" => "Listening Journal · Film Score",
+          "due_at" => demo_time(-2, 18, 0),
+          "completed" => true,
+          "updated_at" => @cache.fetch("updated_at")
+        },
+        "demo-assignment-2" => {
+          "course_id" => course_id,
+          "name" => "Practice C Major Scale",
+          "due_at" => demo_time(6, 17, 0),
+          "completed" => false,
+          "updated_at" => @cache.fetch("updated_at")
+        }
       }
-    end
-
-    assignments = {}
-    source_course_ids = Hash(source.fetch("courses", {})).keys
-    Hash(source.fetch("assignments", {})).values.each_with_index do |assignment, index|
-      source_index = source_course_ids.index(assignment["course_id"]) || 0
-      course_id = course_ids[source_index]
-      next unless course_id
-
-      assignments["demo-assignment-#{index + 1}"] = {
-        "course_id" => course_id,
-        "name" => ["Instrument Practice", "Listening Journal"][index] ||
-          "Music Assignment #{index + 1}",
-        "due_at" => assignment["due_at"],
-        "completed" => assignment["completed"] == true,
-        "updated_at" => assignment["updated_at"]
-      }
-    end
-
-    { "courses" => courses, "assignments" => assignments }
+    }
   end
 
   private
