@@ -1,6 +1,6 @@
-name: "School Dashboard"
-description: "Canvas LMS school dashboard"
-version: "0.19.0"
+name: "EmberGuide"
+description: "A clear, family-friendly guide to Canvas coursework"
+version: "0.20.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
@@ -10,7 +10,7 @@ arch:
 ports:
   4567/tcp: 4567
 ports_description:
-  4567/tcp: "School Dashboard"
+  4567/tcp: "EmberGuide"
 map:
   - addon_config:rw
 options:

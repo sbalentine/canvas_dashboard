@@ -1,4 +1,4 @@
 #!/usr/bin/with-contenv bashio
 
-echo "Starting School Dashboard..."
+echo "Starting EmberGuide..."
 exec ruby /app/app.rb

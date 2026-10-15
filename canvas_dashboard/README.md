@@ -1,4 +1,4 @@
-# Canvas School Dashboard
+# EmberGuide
 
 A family-friendly Canvas LMS dashboard for Home Assistant.
 

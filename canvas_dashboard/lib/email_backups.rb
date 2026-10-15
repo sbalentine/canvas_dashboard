@@ -180,7 +180,7 @@ def build_backup_archive(now: Time.now)
 end
 
 def backup_archive_filename(now)
-  "school-dashboard-backup-#{now.strftime("%Y-%m-%d-%H%M%S")}.zip"
+  "emberguide-backup-#{now.strftime("%Y-%m-%d-%H%M%S")}.zip"
 end
 
 def gmail_email_configuration
@@ -196,13 +196,13 @@ def gmail_email_configuration
 end
 
 def backup_email_message(sender:, recipient:, archive:, filename:, now:)
-  boundary = "school-dashboard-#{SecureRandom.hex(16)}"
+  boundary = "emberguide-backup-#{SecureRandom.hex(16)}"
   encoded_archive = Base64.strict_encode64(archive).scan(/.{1,76}/).join("\r\n")
 
   [
-    "From: School Dashboard <#{sender}>",
+    "From: EmberGuide <#{sender}>",
     "To: #{recipient}",
-    "Subject: School Dashboard Backup for #{now.strftime("%B %-d, %Y")}",
+    "Subject: EmberGuide Backup for #{now.strftime("%B %-d, %Y")}",
     "Date: #{now.rfc2822}",
     "MIME-Version: 1.0",
     "Content-Type: multipart/mixed; boundary=\"#{boundary}\"",
@@ -526,7 +526,7 @@ def digest_assignment_html(assignment, digest)
   HTML
 end
 
-def digest_html_body(digest, now)
+def digest_html_body(digest, now, logo_src: "/emberguide-icon.png")
   grade_cards =
     if digest["grade_snapshot"].empty?
       '<p style="margin:0;color:#9b98b2;">No graded assignments yet.</p>'
@@ -700,10 +700,9 @@ def digest_html_body(digest, now)
             <table role="presentation" style="margin-bottom:14px;border-collapse:collapse;">
               <tr>
                 <td style="width:24px;vertical-align:middle;">
-                  <span style="display:inline-block;width:7px;height:19px;border-radius:999px;background:#9e9cff;transform:rotate(18deg);"></span>
-                  <span style="display:inline-block;width:7px;height:14px;margin-left:1px;border-radius:999px;background:#706df4;transform:rotate(18deg);"></span>
+                  <img src="#{CGI.escapeHTML(logo_src)}" width="24" height="24" alt="" style="display:block;width:24px;height:24px;border:0;border-radius:6px;">
                 </td>
-                <td style="padding-left:8px;vertical-align:middle;font-size:14px;font-weight:800;letter-spacing:1px;color:#f4f2ff;">NextStep</td>
+                <td style="padding-left:8px;vertical-align:middle;font-size:14px;font-weight:800;letter-spacing:1px;color:#f4f2ff;">EmberGuide</td>
               </tr>
             </table>
             <h1 class="digest-title" style="margin:0;font-size:30px;line-height:1.2;color:#f4f2ff;">Daily Digest</h1>
@@ -734,7 +733,7 @@ def digest_html_body(digest, now)
             </table>
           </div>
 
-          <div style="padding:24px 0 0;text-align:center;font-size:12px;color:#68647d;">Sent by NextStep</div>
+          <div style="padding:24px 0 0;text-align:center;font-size:12px;color:#68647d;">Sent by EmberGuide</div>
         </div>
       </body>
     </html>
@@ -742,15 +741,20 @@ def digest_html_body(digest, now)
 end
 
 def digest_email_message(sender:, recipient:, digest:, now:)
-  boundary = "school-dashboard-digest-#{SecureRandom.hex(16)}"
+  boundary = "emberguide-digest-#{SecureRandom.hex(16)}"
+  related_boundary = "emberguide-related-#{SecureRandom.hex(16)}"
+  logo_content_id = "emberguide-logo"
   text = digest_text_body(digest, now)
-  html = digest_html_body(digest, now)
+  html = digest_html_body(digest, now, logo_src: "cid:#{logo_content_id}")
+  logo = Base64.strict_encode64(
+    File.binread(File.join(APP_ROOT, "icon.png"))
+  ).scan(/.{1,76}/).join("\r\n")
   profile_name = digest["profile_name"].to_s.gsub(/[\r\n]+/, " ").strip
 
   [
-    "From: NextStep <#{sender}>",
+    "From: EmberGuide <#{sender}>",
     "To: #{recipient}",
-    "Subject: #{profile_name}'s NextStep Daily Digest",
+    "Subject: #{profile_name}'s EmberGuide Daily Digest",
     "Date: #{now.rfc2822}",
     "MIME-Version: 1.0",
     "Content-Type: multipart/alternative; boundary=\"#{boundary}\"",
@@ -761,10 +765,21 @@ def digest_email_message(sender:, recipient:, digest:, now:)
     "",
     text,
     "--#{boundary}",
+    "Content-Type: multipart/related; boundary=\"#{related_boundary}\"",
+    "",
+    "--#{related_boundary}",
     "Content-Type: text/html; charset=UTF-8",
     "Content-Transfer-Encoding: 8bit",
     "",
     html,
+    "--#{related_boundary}",
+    "Content-Type: image/png; name=\"emberguide-icon.png\"",
+    "Content-Transfer-Encoding: base64",
+    "Content-ID: <#{logo_content_id}>",
+    "Content-Disposition: inline; filename=\"emberguide-icon.png\"",
+    "",
+    logo,
+    "--#{related_boundary}--",
     "--#{boundary}--",
     ""
   ].join("\r\n")

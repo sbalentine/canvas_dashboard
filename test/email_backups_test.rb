@@ -133,7 +133,7 @@ class EmailBackupsTest < Minitest::Test
       now: now
     )
 
-    assert_includes message, "Subject: School Dashboard Backup for October 11, 2026"
+    assert_includes message, "Subject: EmberGuide Backup for October 11, 2026"
     assert_includes message, "Content-Disposition: attachment; filename=\"backup.zip\""
     refute_includes message, "Content-Type: text/plain"
   end
@@ -142,7 +142,7 @@ class EmailBackupsTest < Minitest::Test
     now = Time.new(2026, 10, 11, 20, 8, 9, "-07:00")
 
     assert_equal(
-      "school-dashboard-backup-2026-10-11-200809.zip",
+      "emberguide-backup-2026-10-11-200809.zip",
       backup_archive_filename(now)
     )
   end
@@ -214,7 +214,7 @@ class EmailBackupsTest < Minitest::Test
     assert_equal %w[Science Math], digest["grade_snapshot"].map { |grade| grade["name"] }
     assert_includes html, "Daily Digest"
     assert_includes html, "Avery &middot; October 11, 2026"
-    assert_includes html, ">NextStep</td>"
+    assert_includes html, ">EmberGuide</td>"
     assert_includes text, "Daily Digest for Avery for October 11, 2026"
     assert_includes html, "Current Grade Snapshot"
     assert_includes html, '<meta name="viewport" content="width=device-width, initial-scale=1">'
@@ -341,8 +341,11 @@ class EmailBackupsTest < Minitest::Test
     assert_equal %w[one@example.com two@example.com],
       delivery[:messages].map { |message| message[:recipient] }
     assert_includes delivery[:messages].first[:message], "multipart/alternative"
+    assert_includes delivery[:messages].first[:message], "multipart/related"
     assert_includes delivery[:messages].first[:message],
-      "Subject: Avery's NextStep Daily Digest"
+      "Content-ID: <emberguide-logo>"
+    assert_includes delivery[:messages].first[:message],
+      "Subject: Avery's EmberGuide Daily Digest"
   end
 
   def test_backup_and_digest_run_once_at_their_scheduled_hours

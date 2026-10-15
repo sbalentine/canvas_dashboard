@@ -90,7 +90,7 @@ def fetch_school_calendar(feed_url)
   uri = URI.parse(feed_url)
   request = Net::HTTP::Get.new(uri)
   request["Accept"] = "text/calendar"
-  request["User-Agent"] = "School Dashboard"
+  request["User-Agent"] = "EmberGuide"
 
   response = Net::HTTP.start(
     uri.hostname,

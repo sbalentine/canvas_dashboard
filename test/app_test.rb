@@ -132,7 +132,7 @@ class AppTest < Minitest::Test
     assert_includes html, "What to Do Next"
     assert_includes html, "next-action-urgency is-missing"
     assert_includes html, 'class="dashboard-nav"'
-    assert_includes html, "<strong>NextStep</strong>"
+    assert_includes html, "<strong>EmberGuide</strong>"
     assert_includes html, 'class="dashboard-nav-toggle"'
     assert_includes html, 'aria-controls="dashboard-nav-links"'
     assert_match(

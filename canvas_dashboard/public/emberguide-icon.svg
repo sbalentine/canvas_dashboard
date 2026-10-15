@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="background" x1="64" y1="32" x2="448" y2="480">
+      <stop stop-color="#211d39"/>
+      <stop offset="1" stop-color="#0d0b18"/>
+    </linearGradient>
+    <linearGradient id="ember" x1="100" y1="60" x2="420" y2="460">
+      <stop stop-color="#ffc96b"/>
+      <stop offset="0.55" stop-color="#ff8a5b"/>
+      <stop offset="1" stop-color="#d96f76"/>
+    </linearGradient>
+    <linearGradient id="path" x1="180" y1="230" x2="320" y2="430">
+      <stop stop-color="#aaa8ff"/>
+      <stop offset="1" stop-color="#6663f2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#background)"/>
+  <g transform="scale(3.2)">
+    <g transform="translate(2 -30) scale(.98)">
+    <path
+      d="M81 36c31 34 56 59 56 91 0 35-25 60-57 60-34 0-58-26-58-60 0-27 15-49 38-75-2 22 6 35 19 43 11-18 11-37 2-59z"
+      fill="none"
+      stroke="url(#ember)"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      stroke-width="16"
+    />
+    <path
+      d="M80 112c11 12 20 22 20 34 0 12-8 21-20 21-11 0-20-9-20-21 0-10 7-21 20-34z"
+      fill="url(#path)"
+    />
+    </g>
+  </g>
+</svg>

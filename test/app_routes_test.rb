@@ -76,7 +76,7 @@ class AppRoutesTest < Minitest::Test
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
-    assert_includes dashboard.body, "<title>School Dashboard</title>"
+    assert_includes dashboard.body, "<title>EmberGuide</title>"
     assert_includes dashboard.body, 'rel="stylesheet"'
     dashboard_navigation = dashboard.body[/<nav class="dashboard-nav".*?<\/nav>/m]
     refute_includes dashboard_navigation, ">Grades<"
@@ -86,7 +86,7 @@ class AppRoutesTest < Minitest::Test
     assert_includes chart.body, "Chart.js v4.5.1"
     assert_equal "text/javascript; charset=utf-8", navigation["Content-Type"]
     assert_includes navigation.body, "dashboard-nav-toggle"
-    assert_equal "School Dashboard", JSON.parse(manifest.body)["name"]
+    assert_equal "EmberGuide", JSON.parse(manifest.body)["name"]
     assert_equal "200", class_names.code
     assert_includes class_names.body, "Classes Outside Canvas"
     assert_equal "200", grades.code
@@ -121,7 +121,7 @@ class AppRoutesTest < Minitest::Test
     assert_equal "200", backup_download.code
     assert_equal "application/zip", backup_download["Content-Type"]
     assert_match(
-      /\Aattachment; filename="school-dashboard-backup-\d{4}-\d{2}-\d{2}-\d{6}\.zip"\z/,
+      /\Aattachment; filename="emberguide-backup-\d{4}-\d{2}-\d{2}-\d{6}\.zip"\z/,
       backup_download["Content-Disposition"]
     )
     assert_equal "no-store", backup_download["Cache-Control"]

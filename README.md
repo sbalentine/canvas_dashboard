@@ -1,4 +1,4 @@
-# 📚 Canvas School Dashboard
+# 🔥 EmberGuide
 
 A lightweight, family-friendly dashboard for [Canvas LMS](https://www.instructure.com/canvas) built with Ruby.
 
@@ -29,7 +29,7 @@ It was designed to run continuously as a **Home Assistant add-on on a Raspberry 
 
 ```text
 ┌─────────────────────────────────────────────┐
-│ 📚 School Dashboard                         │
+│ 🔥 EmberGuide                               │
 │ Monday, September 15                        │
 │                                             │
 │ ⚠️ Missing Assignments                     │
@@ -129,7 +129,7 @@ The **Scheduled Emails** page supports separate recipient lists and schedules fo
 
 Generate an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Use **Download Backup** to save it directly without email, optionally enable email delivery every day at 3:00 AM local time, or use **Email Backup Now**.
 
-Each message has the subject `School Dashboard Backup for {Current Date}` and contains only the ZIP attachment. The archive is discarded after Gmail accepts the message; no backup ZIP is retained on the system.
+Each message has the subject `EmberGuide Backup for {Current Date}` and contains only the ZIP attachment. The archive is discarded after Gmail accepts the message; no backup ZIP is retained on the system.
 
 The archive includes the Canvas cache, manual coursework, grade overrides and custom grades, class-name mappings, hidden classes, event history, backup recipient, a manifest, and checksums. It never includes `/data/options.json`, the Canvas token, or Gmail credentials.
 
@@ -137,7 +137,7 @@ To enable email delivery:
 
 1. Enable 2-Step Verification on the sending Google account.
 2. Create a Google app password for the dashboard.
-3. In the Home Assistant School Dashboard app configuration, set `gmail_sender` to that Google account's email address and `gmail_app_password` to the generated app password.
+3. In the Home Assistant EmberGuide app configuration, set `gmail_sender` to that Google account's email address and `gmail_app_password` to the generated app password.
 4. Restart the app, open **Scheduled Emails**, and configure the backup and digest recipients.
 
 #### Daily digest
@@ -204,7 +204,7 @@ rest:
   - resource: http://HOME_ASSISTANT_HOST:4567/api/status
     scan_interval: 60
     sensor:
-      - name: School Dashboard Event
+      - name: EmberGuide Event
         value_template: "{{ value_json.latest_event_id }}"
         json_attributes:
           - latest_event
@@ -242,7 +242,7 @@ automation:
 ## Project Structure
 
 ```text
-canvas-school-dashboard/
+emberguide/
 ├── repository.yaml
 ├── run-local.sh
 ├── test/
@@ -398,7 +398,7 @@ This is particularly useful when Home Assistant OS is running on an always-on Ra
 https://github.com/sbalentine/canvas_dashboard
 ```
 
-4. Refresh the app store and select **School Dashboard**.
+4. Refresh the app store and select **EmberGuide**.
 5. Install the app and enter the Canvas configuration below.
 
 ---
@@ -410,9 +410,9 @@ The included `config.yaml` defines the add-on and exposes the dashboard web serv
 Example:
 
 ```yaml
-name: "School Dashboard"
-description: "Canvas LMS school dashboard"
-version: "0.19.0"
+name: "EmberGuide"
+description: "A clear, family-friendly guide to Canvas coursework"
+version: "0.20.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false
@@ -424,7 +424,7 @@ ports:
   4567/tcp: 4567
 
 ports_description:
-  4567/tcp: "School Dashboard"
+  4567/tcp: "EmberGuide"
 
 map:
   - addon_config:rw
@@ -456,7 +456,7 @@ After placing or updating the files:
 
 1. Open **Home Assistant**
 2. Go to **Settings → Apps**
-3. Open the local **School Dashboard** add-on
+3. Open the local **EmberGuide** add-on
 4. Rebuild/update the add-on
 5. Start it
 6. Check the add-on logs
@@ -464,9 +464,9 @@ After placing or updating the files:
 A successful startup should look similar to:
 
 ```text
-Starting School Dashboard...
+Starting EmberGuide...
 Loading cached Canvas data...
-School Dashboard listening on port 4567
+EmberGuide listening on port 4567
 Refreshing Canvas data...
 Canvas cache saved.
 Canvas refresh successful at ...

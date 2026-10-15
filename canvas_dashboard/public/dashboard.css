@@ -103,25 +103,16 @@ a:hover {
 }
 
 .dashboard-brand-mark {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 24px;
-}
-
-.dashboard-brand-mark span {
   display: block;
-  width: 8px;
-  height: 19px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #9e9cff, #6663f2);
-  transform: rotate(18deg);
+  width: 32px;
+  height: 32px;
 }
 
-.dashboard-brand-mark span:last-child {
-  height: 14px;
-  opacity: 0.72;
-  transform: rotate(18deg) translateY(2px);
+.dashboard-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
 }
 
 .dashboard-nav-links {

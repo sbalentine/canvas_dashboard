@@ -22,7 +22,7 @@ require_relative "lib/school_calendar"
 # ============================================================
 
 if $PROGRAM_NAME == __FILE__
-  puts "Starting School Dashboard..."
+  puts "Starting EmberGuide..."
 
   initialize_dashboard_data
   initialize_event_journal
@@ -75,12 +75,12 @@ server.mount_proc "/" do |_request, response|
             href="/dashboard.css"
           >
 
-          <title>School Dashboard</title>
+          <title>EmberGuide</title>
         </head>
 
         <body>
           <main class="container">
-            <h1>📚 School Dashboard</h1>
+            <h1>EmberGuide</h1>
             <p>Waiting for Canvas data...</p>
           </main>
         </body>
@@ -990,14 +990,25 @@ end
 # App Icon
 # ============================================================
 
-server.mount_proc "/school-icon.svg" do |_request, response|
+server.mount_proc "/emberguide-icon.svg" do |_request, response|
   response.status = 200
   response["Content-Type"] = "image/svg+xml"
   response["Cache-Control"] = "public, max-age=86400"
 
   response.body =
     File.read(
-      File.join(APP_ROOT, "public", "school-icon.svg")
+      File.join(APP_ROOT, "public", "emberguide-icon.svg")
+    )
+end
+
+server.mount_proc "/emberguide-icon.png" do |_request, response|
+  response.status = 200
+  response["Content-Type"] = "image/png"
+  response["Cache-Control"] = "public, max-age=86400"
+
+  response.body =
+    File.binread(
+      File.join(APP_ROOT, "icon.png")
     )
 end
 
@@ -1012,17 +1023,17 @@ server.mount_proc "/manifest.json" do |_request, response|
 
   response.body = JSON.generate(
     {
-      name: "School Dashboard",
-      short_name: "School",
+      name: "EmberGuide",
+      short_name: "EmberGuide",
       start_url: "/",
       scope: "/",
       display: "standalone",
-      background_color: "#f4f6f8",
-      theme_color: "#5b67d6",
+      background_color: "#080711",
+      theme_color: "#171427",
 
       icons: [
         {
-          src: "/school-icon.svg",
+          src: "/emberguide-icon.svg",
           sizes: "any",
           type: "image/svg+xml",
           purpose: "any"
@@ -1038,17 +1049,17 @@ end
 
 if $PROGRAM_NAME == __FILE__
   trap("TERM") do
-    puts "Stopping School Dashboard..."
+    puts "Stopping EmberGuide..."
     server.shutdown
   end
 
   trap("INT") do
-    puts "Stopping School Dashboard..."
+    puts "Stopping EmberGuide..."
     server.shutdown
   end
 
   puts(
-    "School Dashboard listening on port " \
+    "EmberGuide listening on port " \
     "#{server.config[:Port]}"
   )
 
