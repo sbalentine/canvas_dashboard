@@ -82,9 +82,14 @@ Assignments link back to Canvas when Canvas provides an assignment URL.
 
 ### ✍️ Manual Classes and Assignments
 
-Use **Manual Classes & Assignments** from the dashboard to track coursework that is not available in Canvas. Add a class, create assignments with due dates and times, and mark assignments complete from the management page.
+Use **Classes** in Settings to add classes that are not available in Canvas. Use
+**Assignment Grades** to create assignments with due dates and times and mark
+them complete.
 
-Incomplete future assignments appear in **Upcoming Assignments** and incomplete overdue assignments appear in **Missing Assignments**. Manual coursework is stored in `/data/manual_coursework.json` for the Home Assistant add-on or `tmp/manual_coursework.json` locally, so Canvas refreshes do not overwrite it.
+Incomplete future assignments appear in **This Week** and incomplete overdue
+assignments appear in **Missing Assignments**. Manual coursework is stored in
+`/data/manual_coursework.json` for the Home Assistant add-on or
+`tmp/manual_coursework.json` locally, so Canvas refreshes do not overwrite it.
 
 ### 📊 Grade Summary
 
@@ -407,7 +412,7 @@ Example:
 ```yaml
 name: "School Dashboard"
 description: "Canvas LMS school dashboard"
-version: "0.18.2"
+version: "0.19.0"
 url: "https://github.com/sbalentine/canvas_dashboard"
 slug: "canvas_dashboard"
 init: false

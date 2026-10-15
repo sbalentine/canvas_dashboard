@@ -139,33 +139,16 @@ end
 # ============================================================
 
 server.mount_proc "/settings" do |request, response|
-  calendar_error = nil
-
-  if request.request_method == "POST"
-    begin
-      save_school_calendar_settings(
-        request.query["calendar_feed_url"],
-        request.query["calendar_excluded_keywords"]
-      )
-      response.status = 303
-      response["Location"] = "/settings?saved=calendar"
-      response.body = ""
-      next
-    rescue ArgumentError => e
-      calendar_error = e.message
-      response.status = 422
-    end
-  elsif request.request_method != "GET"
+  if request.request_method != "GET"
     response.status = 405
-    response["Allow"] = "GET, POST"
+    response["Allow"] = "GET"
     response.body = "Method not allowed"
     next
   end
 
-  calendar_settings = load_school_calendar_settings
   template = ERB.new(File.read(File.join(APP_ROOT, "views", "settings.erb")))
 
-  response.status = 200 if request.request_method == "GET"
+  response.status = 200
   response["Content-Type"] = "text/html; charset=utf-8"
   response["Cache-Control"] = "no-cache"
   response.body = template.result(binding)
@@ -182,7 +165,7 @@ end
 # ============================================================
 
 server.mount_proc "/calendar" do |request, response|
-  unless request.request_method == "GET"
+  if request.request_method != "GET"
     response.status = 405
     response["Allow"] = "GET"
     response.body = "Method not allowed"
@@ -205,6 +188,47 @@ rescue => e
   response.status = 500
   response["Content-Type"] = "text/plain; charset=utf-8"
   response.body = "Unable to load the school calendar."
+end
+
+server.mount_proc "/settings/calendar" do |request, response|
+  calendar_error = nil
+
+  if request.request_method == "POST"
+    begin
+      save_school_calendar_settings(
+        request.query["calendar_feed_url"],
+        request.query["calendar_excluded_keywords"]
+      )
+      response.status = 303
+      response["Location"] = "/settings/calendar?saved=1"
+      response.body = ""
+      next
+    rescue ArgumentError => e
+      calendar_error = e.message
+      response.status = 422
+    end
+  elsif request.request_method != "GET"
+    response.status = 405
+    response["Allow"] = "GET, POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  calendar_settings = load_school_calendar_settings
+  template = ERB.new(
+    File.read(File.join(APP_ROOT, "views", "calendar_settings.erb"))
+  )
+
+  response.status = 200 if request.request_method == "GET"
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Calendar settings error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load calendar settings."
 end
 
 def todo_form_fields(request, data)
@@ -416,17 +440,24 @@ def hidden_course_fields(request, data)
   end
 end
 
-server.mount_proc "/class-names" do |request, response|
+server.mount_proc "/settings/classes" do |request, response|
   data = dashboard_data_with_manual(include_hidden: true) || {}
+  coursework = load_manual_coursework
 
   if request.request_method == "POST"
     begin
-      mappings = class_name_mapping_fields(request, data)
-      save_course_name_mappings(mappings)
-      save_hidden_course_ids(hidden_course_fields(request, data))
+      if %w[create_course update_course delete_course].include?(request.query["action"])
+        update_manual_coursework(request)
+        location = "/settings/classes"
+      else
+        mappings = class_name_mapping_fields(request, data)
+        save_course_name_mappings(mappings)
+        save_hidden_course_ids(hidden_course_fields(request, data))
+        location = "/"
+      end
 
       response.status = 303
-      response["Location"] = "/"
+      response["Location"] = location
       response.body = ""
     rescue ArgumentError => e
       response.status = 422
@@ -463,51 +494,6 @@ rescue => e
 end
 
 # ============================================================
-# Manual Classes and Assignments
-# ============================================================
-
-server.mount_proc "/coursework" do |request, response|
-  if request.request_method == "POST"
-    begin
-      update_manual_coursework(request)
-
-      response.status = 303
-      response["Location"] = "/coursework"
-      response.body = ""
-    rescue ArgumentError => e
-      response.status = 422
-      response["Content-Type"] = "text/plain; charset=utf-8"
-      response.body = e.message
-    end
-
-    next
-  end
-
-  unless request.request_method == "GET"
-    response.status = 405
-    response["Allow"] = "GET, POST"
-    response.body = "Method not allowed"
-    next
-  end
-
-  coursework = load_manual_coursework
-  template = ERB.new(
-    File.read(File.join(APP_ROOT, "views", "coursework.erb"))
-  )
-
-  response.status = 200
-  response["Content-Type"] = "text/html; charset=utf-8"
-  response["Cache-Control"] = "no-cache"
-  response.body = template.result(binding)
-rescue => e
-  puts "Manual coursework error: #{e.class}: #{e.message}"
-
-  response.status = 500
-  response["Content-Type"] = "text/plain; charset=utf-8"
-  response.body = "Unable to load manual classes and assignments."
-end
-
-# ============================================================
 # Scheduled Emails
 # ============================================================
 
@@ -520,11 +506,11 @@ server.mount_proc "/backups" do |request, response|
   end
 
   response.status = 303
-  response["Location"] = "/scheduled-emails"
+  response["Location"] = "/settings/emails"
   response.body = ""
 end
 
-server.mount_proc "/scheduled-emails/digest-preview" do |request, response|
+server.mount_proc "/settings/emails/digest-preview" do |request, response|
   unless %w[GET HEAD].include?(request.request_method)
     response.status = 405
     response["Allow"] = "GET, HEAD"
@@ -545,7 +531,7 @@ rescue => e
   response.body = "Unable to generate the daily digest preview."
 end
 
-server.mount_proc "/scheduled-emails/backup-download" do |request, response|
+server.mount_proc "/settings/emails/backup-download" do |request, response|
   unless %w[GET HEAD].include?(request.request_method)
     response.status = 405
     response["Allow"] = "GET, HEAD"
@@ -570,7 +556,7 @@ rescue => e
   response.body = "Unable to generate the dashboard backup."
 end
 
-server.mount_proc "/scheduled-emails" do |request, response|
+server.mount_proc "/settings/emails" do |request, response|
   email_error = nil
 
   if request.request_method == "POST"
@@ -581,19 +567,19 @@ server.mount_proc "/scheduled-emails" do |request, response|
       case request.query["action"]
       when "save"
         response.status = 303
-        response["Location"] = "/scheduled-emails?saved=1"
+        response["Location"] = "/settings/emails?saved=1"
         response.body = ""
         next
       when "send_backup"
         send_school_dashboard_backup(settings["backup_recipients"])
         response.status = 303
-        response["Location"] = "/scheduled-emails?sent=backup"
+        response["Location"] = "/settings/emails?sent=backup"
         response.body = ""
         next
       when "send_digest"
         send_school_dashboard_digest(settings["digest_recipients"])
         response.status = 303
-        response["Location"] = "/scheduled-emails?sent=digest"
+        response["Location"] = "/settings/emails?sent=digest"
         response.body = ""
         next
       else
@@ -636,6 +622,14 @@ rescue => e
   response.status = 500
   response["Content-Type"] = "text/plain; charset=utf-8"
   response.body = "Unable to load scheduled email settings."
+end
+
+%w[/grades /class-names /scheduled-emails /coursework].each do |path|
+  server.mount_proc path do |_request, response|
+    response.status = 404
+    response["Content-Type"] = "text/plain; charset=utf-8"
+    response.body = "Not found"
+  end
 end
 
 # ============================================================
@@ -783,9 +777,19 @@ rescue Date::Error
   raise ArgumentError, "A valid grade date is required"
 end
 
-server.mount_proc "/grades" do |request, response|
+server.mount_proc "/settings/grades" do |request, response|
   data = dashboard_data_with_manual || {}
-  selected_course_id = request.query["course_id"].to_s
+  coursework = load_manual_coursework
+  manual_assignment_action =
+    %w[create_assignment update_assignment delete_assignment].include?(
+      request.query["action"]
+    )
+  selected_course_id =
+    if manual_assignment_action
+      request.query["selected_course_id"].to_s
+    else
+      request.query["course_id"].to_s
+    end
   selected_course_id = nil if selected_course_id.empty?
   selected_course =
     if selected_course_id
@@ -803,17 +807,23 @@ server.mount_proc "/grades" do |request, response|
 
   if request.request_method == "POST"
     begin
-      existing = load_grade_overrides
-      overrides = grade_override_fields(
-        request,
-        data,
-        existing,
-        course_id: selected_course_id
-      )
-      save_grade_overrides(overrides)
+      if manual_assignment_action
+        update_manual_coursework(request)
+        location = "/settings/grades"
+      else
+        existing = load_grade_overrides
+        overrides = grade_override_fields(
+          request,
+          data,
+          existing,
+          course_id: selected_course_id
+        )
+        save_grade_overrides(overrides)
+        location = "/"
+      end
 
       response.status = 303
-      response["Location"] = "/"
+      response["Location"] = location
       response.body = ""
     rescue ArgumentError => e
       response.status = 422

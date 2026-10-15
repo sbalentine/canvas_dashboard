@@ -128,8 +128,9 @@ class AppTest < Minitest::Test
 
     assert_includes html, "&lt;Avery&gt;"
     assert_includes html, "Quiz &lt;One&gt;"
-    assert_includes html, "No graded Canvas assignments"
-    assert_includes html, "1 missing"
+    assert_includes html, "No graded assignments"
+    assert_includes html, "What to Do Next"
+    assert_includes html, "next-action-urgency is-missing"
     assert_includes html, 'class="dashboard-nav"'
     assert_includes html, "<strong>NextStep</strong>"
     assert_includes html, 'class="dashboard-nav-toggle"'
@@ -145,7 +146,7 @@ class AppTest < Minitest::Test
     refute_includes html, "Quiz <One>"
   end
 
-  def test_up_next_shows_all_clear_instead_of_zero_counts
+  def test_next_actions_show_all_caught_up_instead_of_zero_counts
     data = {
       "profile" => { "short_name" => "Emberlynn" },
       "courses" => [],
@@ -162,7 +163,7 @@ class AppTest < Minitest::Test
       template.result(binding)
     end
 
-    assert_includes html, "All clear"
+    assert_includes html, "You're all caught up."
     refute_includes html, "0 assignments"
     refute_includes html, "0 due tomorrow"
     refute_includes html, "No missing work"
@@ -231,8 +232,9 @@ class AppTest < Minitest::Test
     html = template.result(binding)
 
     assert_includes html, "Overall grade snapshot"
-    assert_includes html, "🧪"
-    assert_includes html, "grade-snapshot-item grade-a perfect-grade"
+    assert_includes html, "grade-snapshot-course"
+    assert_includes html, "6th Grade Science"
+    assert_includes html, "grade-snapshot-item grade-a"
     assert_includes html, "<strong>100%</strong>"
     assert_includes html, "grade-snapshot-letter\">A"
     assert_includes html, 'href="#grade-course-1"'

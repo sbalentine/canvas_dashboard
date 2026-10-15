@@ -11,7 +11,7 @@
     rel="stylesheet"
     href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
   >
-  <title>Edit Class Names</title>
+  <title>Classes</title>
 </head>
 
 <body>
@@ -23,16 +23,21 @@
 
     <header class="settings-header">
       <div>
-        <h1>Edit Class Names</h1>
+        <h1>Classes</h1>
         <div class="subtitle">
-          Rename classes locally or hide Canvas classes that are not needed.
+          Rename or hide Canvas classes, and manage classes added in NextStep.
         </div>
       </div>
 
     </header>
 
-    <form class="card class-name-settings" method="post" action="/class-names">
-      <% (data["courses"] || []).sort_by { |course| course["name"].to_s.strip }.each do |course| %>
+    <form class="card class-name-settings" method="post" action="/settings/classes">
+      <h2>Canvas Classes</h2>
+      <p class="settings-intro">
+        Choose a shorter display name or hide a class from the dashboard.
+      </p>
+
+      <% (data["courses"] || []).reject { |course| course["_manual"] }.sort_by { |course| course["name"].to_s.strip }.each do |course| %>
         <div class="class-name-row">
           <span class="canvas-class-name">
             <%= h course["name"].to_s.strip %>
@@ -46,17 +51,15 @@
             placeholder="Use Canvas name"
           >
 
-          <% unless course["_manual"] %>
-            <label class="hide-class-field">
-              <input
-                type="checkbox"
-                name="hidden_course_<%= h course["id"] %>"
-                value="true"
-                <%= "checked" if hidden_course_ids.include?(course["id"].to_s) %>
-              >
-              <span>Hide from dashboard</span>
-            </label>
-          <% end %>
+          <label class="hide-class-field">
+            <input
+              type="checkbox"
+              name="hidden_course_<%= h course["id"] %>"
+              value="true"
+              <%= "checked" if hidden_course_ids.include?(course["id"].to_s) %>
+            >
+            <span>Hide from dashboard</span>
+          </label>
         </div>
       <% end %>
 
@@ -65,6 +68,62 @@
         <button type="submit">Save Class Settings</button>
       </div>
     </form>
+
+    <section class="card coursework-settings-section">
+      <h2>Classes Outside Canvas</h2>
+      <p class="settings-intro">
+        Add classes that should appear in NextStep but are not available in Canvas.
+      </p>
+
+      <div class="coursework-list">
+        <% coursework["courses"].sort_by { |_id, course| course["name"] }.each do |id, course| %>
+          <form class="coursework-row" method="post" action="/settings/classes">
+            <input type="hidden" name="action" value="update_course">
+            <input type="hidden" name="id" value="<%= h id %>">
+
+            <label class="coursework-name-field">
+              <span>Class name</span>
+              <input
+                type="text"
+                name="name"
+                value="<%= h course["name"] %>"
+                maxlength="80"
+                required
+              >
+            </label>
+
+            <div class="coursework-row-actions">
+              <button type="submit">Save</button>
+              <button
+                class="danger-button"
+                type="submit"
+                name="action"
+                value="delete_course"
+              >
+                Remove
+              </button>
+            </div>
+          </form>
+        <% end %>
+      </div>
+
+      <form class="coursework-create-form" method="post" action="/settings/classes">
+        <input type="hidden" name="action" value="create_course">
+
+        <label class="coursework-name-field">
+          <span>New class</span>
+          <input
+            type="text"
+            name="name"
+            maxlength="80"
+            placeholder="Class name"
+            required
+          >
+        </label>
+
+        <button type="submit">+ Add Class</button>
+      </form>
+    </section>
   </main>
 </body>
 </html>

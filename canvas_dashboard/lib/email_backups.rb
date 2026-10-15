@@ -375,7 +375,9 @@ def digest_assignment_text(assignment, digest)
     else
       "No due date"
     end
-  "#{assignment_name(assignment)} - #{course} - #{due_label}"
+  summary = "#{assignment_name(assignment)} - #{course} - #{due_label}"
+  url = assignment_url(assignment)
+  url ? "#{summary}\n  #{url}" : summary
 end
 
 def digest_text_body(digest, now)
@@ -412,7 +414,7 @@ def digest_text_body(digest, now)
     end
   end
 
-  lines.concat(["", "IMPORTANT CALENDAR DATES"])
+  lines.concat(["", "UPCOMING SCHEDULE CHANGES"])
   if digest["important_calendar_dates"].empty?
     lines << "No important dates in the next 30 days."
   else
@@ -439,10 +441,12 @@ def digest_text_body(digest, now)
         digest["mappings"],
         assignment["course_id"]
       )
-      lines << "#{assignment["name"]} - #{course}: " \
+      grade_line = "#{assignment["name"]} - #{course}: " \
         "#{format_number(submission["score"])}/" \
         "#{format_number(assignment["points_possible"])} " \
         "(#{submission["_digest_graded_at"].getlocal.strftime("%b %-d")})"
+      url = assignment_url(submission)
+      lines << (url ? "#{grade_line}\n  #{url}" : grade_line)
     end
   end
 
@@ -451,14 +455,14 @@ end
 
 def digest_grade_colors(letter)
   {
-    "A" => { foreground: "#027a48", background: "#ecfdf3" },
-    "B" => { foreground: "#175cd3", background: "#eff8ff" },
-    "C" => { foreground: "#b54708", background: "#fffaeb" },
-    "D" => { foreground: "#c4320a", background: "#fff6ed" },
-    "F" => { foreground: "#b42318", background: "#fff1f0" }
+    "A" => { foreground: "#4fd6a0", background: "#11221f", border: "#285746" },
+    "B" => { foreground: "#58a6ff", background: "#101d2d", border: "#284f78" },
+    "C" => { foreground: "#ffc96b", background: "#211c14", border: "#64502b" },
+    "D" => { foreground: "#ff8a5b", background: "#241711", border: "#6d3825" },
+    "F" => { foreground: "#ff7085", background: "#251319", border: "#6d2f3a" }
   }.fetch(
     letter,
-    { foreground: "#344054", background: "#f9fafb" }
+    { foreground: "#9b98b2", background: "#121020", border: "#29263d" }
   )
 end
 
@@ -467,21 +471,21 @@ def digest_recent_grade_colors(score, possible)
 
   if calculated && calculated >= 100
     {
-      foreground: "#8a5a00",
-      background: "#fff7d6",
-      border: "#e8b931"
+      foreground: "#ffc96b",
+      background: "#211c14",
+      border: "#64502b"
     }
   elsif calculated && calculated < 70
     {
-      foreground: "#b42318",
-      background: "#fff1f0",
-      border: "#fecdca"
+      foreground: "#ff7085",
+      background: "#251319",
+      border: "#6d2f3a"
     }
   else
     {
-      foreground: "#344054",
-      background: "#ffffff",
-      border: "#eaecf0"
+      foreground: "#f4f2ff",
+      background: "#121020",
+      border: "#29263d"
     }
   end
 end
@@ -495,19 +499,27 @@ def digest_assignment_html(assignment, digest)
   )
   due_label =
     if due
-      "#{date_label(due)}<br><span style=\"color:#667085;font-size:12px;\">" \
+      "#{date_label(due)}<br><span style=\"color:#9b98b2;font-size:12px;\">" \
         "#{due_time_label(due)}</span>"
     else
       "No due date"
     end
+  name = CGI.escapeHTML(assignment_name(assignment))
+  url = assignment_url(assignment)
+  name_html =
+    if url
+      "<a href=\"#{CGI.escapeHTML(url)}\" style=\"color:#f4f2ff;text-decoration:underline;text-decoration-color:#5f5b83;\">#{name}</a>"
+    else
+      name
+    end
 
   <<~HTML
     <tr>
-      <td style="padding:10px 12px;border-bottom:1px solid #eaecf0;">
-        <strong>#{CGI.escapeHTML(assignment_name(assignment))}</strong><br>
-        <span style="color:#667085;font-size:13px;">#{CGI.escapeHTML(course)}</span>
+      <td style="padding:12px 14px;border-bottom:1px solid #29263d;color:#f4f2ff;">
+        <strong style="color:#f4f2ff;">#{name_html}</strong><br>
+        <span style="color:#9b98b2;font-size:13px;">#{CGI.escapeHTML(course)}</span>
       </td>
-      <td style="padding:10px 12px;border-bottom:1px solid #eaecf0;text-align:right;white-space:nowrap;">
+      <td style="padding:12px 14px;border-bottom:1px solid #29263d;color:#f4f2ff;text-align:right;white-space:nowrap;">
         #{due_label}
       </td>
     </tr>
@@ -517,74 +529,95 @@ end
 def digest_html_body(digest, now)
   grade_cards =
     if digest["grade_snapshot"].empty?
-      '<p style="color:#667085;">No graded assignments yet.</p>'
+      '<p style="margin:0;color:#9b98b2;">No graded assignments yet.</p>'
     else
       cards = digest["grade_snapshot"].map do |grade|
         colors = digest_grade_colors(grade["letter"])
+        progress = [[grade["percentage"], 0].max, 100].min
         <<~HTML
-          <td class="grade-card-cell" style="width:50%;padding:8px;vertical-align:top;">
-            <div style="padding:14px;border:1px solid #{colors[:foreground]};border-top:4px solid #{colors[:foreground]};border-radius:12px;text-align:center;background:#{colors[:background]};">
-              <div style="font-size:13px;color:#475467;">#{CGI.escapeHTML(grade["name"])}</div>
-              <div style="margin-top:5px;font-size:26px;font-weight:800;color:#{colors[:foreground]};">#{grade["percentage"]}%</div>
-              <div style="font-size:16px;font-weight:800;color:#{colors[:foreground]};">#{grade["letter"]}</div>
+          <td class="grade-card-cell" style="width:33.333%;padding:5px;vertical-align:top;">
+            <div style="padding:13px;border:1px solid #{colors[:border]};border-radius:10px;background:#{colors[:background]};">
+              <div style="min-height:32px;font-size:12px;font-weight:700;line-height:1.35;color:#d7d4e5;">#{CGI.escapeHTML(grade["name"])}</div>
+              <table role="presentation" style="width:100%;margin-top:8px;border-collapse:collapse;">
+                <tr>
+                  <td style="font-size:22px;font-weight:800;line-height:1;color:#f4f2ff;">#{grade["percentage"]}%</td>
+                  <td style="text-align:right;">
+                    <span style="display:inline-block;min-width:20px;padding:4px;border-radius:6px;background:#{colors[:border]};color:#{colors[:foreground]};font-size:12px;font-weight:800;text-align:center;">#{grade["letter"]}</span>
+                  </td>
+                </tr>
+              </table>
+              <div style="height:6px;margin-top:11px;border-radius:999px;background:#242139;">
+                <div style="width:#{progress}%;height:6px;border-radius:999px;background:#{colors[:foreground]};"></div>
+              </div>
             </div>
           </td>
         HTML
       end
 
-      cards.each_slice(2).map do |row|
-        "<tr>#{row.join}#{"<td></td>" if row.length == 1}</tr>"
+      cards.each_slice(3).map do |row|
+        empty_cells = "<td></td>" * (3 - row.length)
+        "<tr>#{row.join}#{empty_cells}</tr>"
       end.join
     end
 
   assignment_section = lambda do |title, assignments|
     section_colors = {
-      "Missing Work" => { foreground: "#b42318", background: "#fff1f0", border: "#fecdca" },
-      "Due Today" => { foreground: "#5925dc", background: "#f4f3ff", border: "#d9d6fe" },
-      "Due Tomorrow" => { foreground: "#175cd3", background: "#eff8ff", border: "#b2ddff" }
+      "Missing Work" => { foreground: "#ff7085", background: "#181017", border: "#572b35" },
+      "Due Today" => { foreground: "#ffc96b", background: "#17140f", border: "#55462a" },
+      "Due Tomorrow" => { foreground: "#58a6ff", background: "#0f1621", border: "#284463" }
     }.fetch(
       title,
-      { foreground: "#344054", background: "#f9fafb", border: "#eaecf0" }
+      { foreground: "#f4f2ff", background: "#121020", border: "#29263d" }
     )
     rows =
       if assignments.empty?
-        '<tr><td style="padding:12px;color:#667085;">Nothing due.</td></tr>'
+        '<tr><td style="padding:14px;color:#9b98b2;">All clear.</td></tr>'
       else
         assignments.map { |assignment| digest_assignment_html(assignment, digest) }.join
       end
 
     <<~HTML
-      <h2 style="margin:28px 0 8px;font-size:20px;color:#{section_colors[:foreground]};">#{title}</h2>
-      <table role="presentation" style="width:100%;border:1px solid #{section_colors[:border]};border-collapse:collapse;border-radius:12px;background:#{section_colors[:background]};">
-        #{rows}
-      </table>
+      <div class="digest-card" style="margin-top:18px;padding:18px;border:1px solid #29263d;border-radius:14px;background:#121020;">
+        <h2 style="margin:0 0 10px;font-size:18px;color:#f4f2ff;">#{title}</h2>
+        <table role="presentation" style="width:100%;border:1px solid #{section_colors[:border]};border-left:4px solid #{section_colors[:foreground]};border-collapse:collapse;border-radius:10px;background:#{section_colors[:background]};color:#f4f2ff;">
+          #{rows}
+        </table>
+      </div>
     HTML
   end
 
   recent_rows =
     if digest["recent_grades"].empty?
-      '<tr><td style="padding:12px;color:#667085;">No grades posted.</td></tr>'
+      '<tr><td style="padding:14px;color:#9b98b2;">No grades posted.</td></tr>'
     else
       digest["recent_grades"].map do |submission|
         assignment = submission["assignment"]
+        colors = digest_recent_grade_colors(
+          submission["score"],
+          assignment["points_possible"]
+        )
+        assignment_name = CGI.escapeHTML(assignment["name"].to_s)
+        url = assignment_url(submission)
+        assignment_name_html =
+          if url
+            "<a href=\"#{CGI.escapeHTML(url)}\" style=\"color:#{colors[:foreground]};text-decoration:underline;text-decoration-color:#{colors[:border]};\">#{assignment_name}</a>"
+          else
+            assignment_name
+          end
         course = digest_course_name(
           digest["data"],
           digest["mappings"],
           assignment["course_id"]
         )
-        colors = digest_recent_grade_colors(
-          submission["score"],
-          assignment["points_possible"]
-        )
         <<~HTML
           <tr style="background:#{colors[:background]};color:#{colors[:foreground]};">
-            <td style="padding:10px 12px;border-bottom:1px solid #{colors[:border]};">
-              <strong style="color:#{colors[:foreground]};">#{CGI.escapeHTML(assignment["name"].to_s)}</strong><br>
-              <span style="color:#667085;font-size:13px;">#{CGI.escapeHTML(course)}</span>
+            <td style="padding:12px 14px;border-bottom:1px solid #{colors[:border]};">
+              <strong style="color:#{colors[:foreground]};">#{assignment_name_html}</strong><br>
+              <span style="color:#9b98b2;font-size:13px;">#{CGI.escapeHTML(course)}</span>
             </td>
-            <td style="padding:10px 12px;border-bottom:1px solid #{colors[:border]};text-align:right;white-space:nowrap;">
+            <td style="padding:12px 14px;border-bottom:1px solid #{colors[:border]};text-align:right;white-space:nowrap;">
               <strong style="color:#{colors[:foreground]};">#{format_number(submission["score"])}/#{format_number(assignment["points_possible"])}</strong><br>
-              <span style="color:#667085;font-size:12px;">#{submission["_digest_graded_at"].getlocal.strftime("%b %-d")}</span>
+              <span style="color:#9b98b2;font-size:12px;">#{submission["_digest_graded_at"].getlocal.strftime("%b %-d")}</span>
             </td>
           </tr>
         HTML
@@ -593,7 +626,7 @@ def digest_html_body(digest, now)
 
   calendar_rows =
     if digest["important_calendar_dates"].empty?
-      '<tr><td style="padding:12px;color:#667085;">No important dates in the next 30 days.</td></tr>'
+      '<tr><td style="padding:14px;color:#9b98b2;">No schedule changes in the next 30 days.</td></tr>'
     else
       digest["important_calendar_dates"].map do |event|
         date_label =
@@ -607,16 +640,16 @@ def digest_html_body(digest, now)
           if event["location"].empty?
             ""
           else
-            "<br><span style=\"color:#667085;font-size:12px;\">" \
+            "<br><span style=\"color:#9b98b2;font-size:12px;\">" \
               "#{CGI.escapeHTML(event["location"])}</span>"
           end
 
         <<~HTML
           <tr>
-            <td style="padding:10px 12px;border-bottom:1px solid #d9d6fe;">
-              <strong>#{CGI.escapeHTML(event["title"])}</strong>#{location}
+            <td style="padding:12px 14px;border-bottom:1px solid #29263d;color:#f4f2ff;">
+              <strong style="color:#f4f2ff;">#{CGI.escapeHTML(event["title"])}</strong>#{location}
             </td>
-            <td style="padding:10px 12px;border-bottom:1px solid #d9d6fe;text-align:right;white-space:nowrap;">
+            <td style="padding:12px 14px;border-bottom:1px solid #29263d;color:#d7d4e5;text-align:right;white-space:nowrap;">
               #{date_label}
             </td>
           </tr>
@@ -638,17 +671,19 @@ def digest_html_body(digest, now)
             .digest-header {
               margin-bottom: 16px !important;
               padding: 18px !important;
-              border-radius: 12px !important;
             }
 
             .digest-title {
-              font-size: 23px !important;
+              font-size: 26px !important;
               line-height: 1.25 !important;
             }
 
             .grade-snapshot {
               padding: 14px !important;
-              border-radius: 12px !important;
+            }
+
+            .digest-card {
+              padding: 14px !important;
             }
 
             .grade-card-cell {
@@ -659,30 +694,47 @@ def digest_html_body(digest, now)
           }
         </style>
       </head>
-      <body style="margin:0;padding:0;background:#f4f6f8;font-family:Arial,sans-serif;color:#1d2939;">
-        <div class="digest-wrapper" style="max-width:720px;margin:0 auto;padding:24px;">
-          <div class="digest-header" style="margin-bottom:22px;padding:22px;border-radius:16px;background:#5b67d6;color:#ffffff;">
-            <h1 class="digest-title" style="margin:0;font-size:28px;line-height:1.25;color:#ffffff;">Daily Digest for #{CGI.escapeHTML(digest["profile_name"])} for #{now.strftime("%B %-d, %Y")}</h1>
+      <body style="margin:0;padding:0;background:#080711;font-family:Arial,sans-serif;color:#f4f2ff;">
+        <div class="digest-wrapper" style="max-width:720px;margin:0 auto;padding:28px 24px 36px;">
+          <div class="digest-header" style="margin-bottom:20px;padding:25px;border:1px solid #373256;border-top:4px solid #8583ff;border-radius:14px;background:#171427;color:#f4f2ff;">
+            <table role="presentation" style="margin-bottom:14px;border-collapse:collapse;">
+              <tr>
+                <td style="width:24px;vertical-align:middle;">
+                  <span style="display:inline-block;width:7px;height:19px;border-radius:999px;background:#9e9cff;transform:rotate(18deg);"></span>
+                  <span style="display:inline-block;width:7px;height:14px;margin-left:1px;border-radius:999px;background:#706df4;transform:rotate(18deg);"></span>
+                </td>
+                <td style="padding-left:8px;vertical-align:middle;font-size:14px;font-weight:800;letter-spacing:1px;color:#f4f2ff;">NextStep</td>
+              </tr>
+            </table>
+            <h1 class="digest-title" style="margin:0;font-size:30px;line-height:1.2;color:#f4f2ff;">Daily Digest</h1>
+            <p style="margin:8px 0 0;font-size:15px;color:#d7d4e5;">#{CGI.escapeHTML(digest["profile_name"])} &middot; #{now.strftime("%B %-d, %Y")}</p>
+            <p style="margin:15px 0 0;font-size:14px;line-height:1.5;color:#9b98b2;">A quick look at grades, assignments, and the days ahead.</p>
           </div>
 
-          <div class="grade-snapshot" style="padding:20px;border-radius:16px;background:#f4f3ff;border:1px solid #d9d6fe;">
-            <h2 style="margin:0 0 12px;font-size:20px;color:#5925dc;">Current Grade Snapshot</h2>
-            <table role="presentation" style="width:100%;">#{grade_cards}</table>
+          <div class="grade-snapshot" style="padding:19px;border-radius:14px;background:#121020;border:1px solid #29263d;">
+            <h2 style="margin:0 0 12px;font-size:18px;color:#f4f2ff;">Current Grade Snapshot</h2>
+            <table role="presentation" style="width:100%;border-collapse:collapse;">#{grade_cards}</table>
           </div>
 
           #{assignment_section.call("Missing Work", digest["missing"])}
           #{assignment_section.call("Due Today", digest["due_today"])}
           #{assignment_section.call("Due Tomorrow", digest["due_tomorrow"])}
 
-          <h2 style="margin:28px 0 8px;font-size:20px;color:#4753bd;">Important Calendar Dates</h2>
-          <table role="presentation" style="width:100%;border:1px solid #d9d6fe;border-collapse:collapse;border-radius:12px;background:#f4f3ff;">
-            #{calendar_rows}
-          </table>
+          <div class="digest-card" style="margin-top:18px;padding:18px;border:1px solid #29263d;border-radius:14px;background:#121020;">
+            <h2 style="margin:0 0 10px;font-size:18px;color:#f4f2ff;">Upcoming Schedule Changes</h2>
+            <table role="presentation" style="width:100%;border:1px solid #393455;border-collapse:collapse;border-radius:10px;background:#151225;color:#f4f2ff;">
+              #{calendar_rows}
+            </table>
+          </div>
 
-          <h2 style="margin:28px 0 8px;font-size:20px;color:#344054;">Grades Posted in the Last 7 Days</h2>
-          <table role="presentation" style="width:100%;border:1px solid #eaecf0;border-collapse:collapse;border-radius:12px;background:#ffffff;">
-            #{recent_rows}
-          </table>
+          <div class="digest-card" style="margin-top:18px;padding:18px;border:1px solid #29263d;border-radius:14px;background:#121020;">
+            <h2 style="margin:0 0 10px;font-size:18px;color:#f4f2ff;">Grades Posted in the Last 7 Days</h2>
+            <table role="presentation" style="width:100%;border:1px solid #29263d;border-collapse:collapse;border-radius:10px;background:#0e0c19;color:#f4f2ff;">
+              #{recent_rows}
+            </table>
+          </div>
+
+          <div style="padding:24px 0 0;text-align:center;font-size:12px;color:#68647d;">Sent by NextStep</div>
         </div>
       </body>
     </html>
@@ -693,11 +745,12 @@ def digest_email_message(sender:, recipient:, digest:, now:)
   boundary = "school-dashboard-digest-#{SecureRandom.hex(16)}"
   text = digest_text_body(digest, now)
   html = digest_html_body(digest, now)
+  profile_name = digest["profile_name"].to_s.gsub(/[\r\n]+/, " ").strip
 
   [
-    "From: School Dashboard <#{sender}>",
+    "From: NextStep <#{sender}>",
     "To: #{recipient}",
-    "Subject: School Dashboard Daily Digest for #{now.strftime("%B %-d, %Y")}",
+    "Subject: #{profile_name}'s NextStep Daily Digest",
     "Date: #{now.rfc2822}",
     "MIME-Version: 1.0",
     "Content-Type: multipart/alternative; boundary=\"#{boundary}\"",

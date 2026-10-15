@@ -106,11 +106,10 @@
         {
           "course_id" => course_id,
           "name" => course_display_name,
-          "symbol" => course_symbol(course_display_name),
           "percentage" => calculated.round,
           "letter" => letter_grade(calculated)
         }
-      end.sort_by { |grade| [-grade["percentage"], grade["name"]] }
+      end.sort_by { |grade| grade["name"] }
 
       grade_trend_data = grades_by_course.filter_map do |course_id, submissions|
         points = grade_trend_points(submissions)
@@ -144,10 +143,6 @@
         assignment_due_time(event)
       end
 
-      upcoming_by_date = upcoming.group_by do |event|
-        assignment_due_time(event).getlocal.to_date
-      end
-
       incomplete_upcoming = upcoming.reject do |event|
         submission_complete?(
           submission_for(
@@ -158,12 +153,64 @@
         )
       end
 
-      due_today = incomplete_upcoming.count do |event|
-        assignment_due_time(event).getlocal.to_date == today
+      action_candidates = {}
+
+      missing.each do |event|
+        key = [
+          assignment_course_id(event).to_s,
+          assignment_id(event).to_s,
+          assignment_name(event)
+        ]
+        action_candidates[key] = {
+          "event" => event,
+          "priority" => 0,
+          "urgency" => "Missing",
+          "urgency_class" => "is-missing"
+        }
       end
 
-      due_tomorrow = incomplete_upcoming.count do |event|
-        assignment_due_time(event).getlocal.to_date == tomorrow
+      incomplete_upcoming.each do |event|
+        due = assignment_due_time(event)
+        due_date = due.getlocal.to_date
+        key = [
+          assignment_course_id(event).to_s,
+          assignment_id(event).to_s,
+          assignment_name(event)
+        ]
+        priority, urgency, urgency_class =
+          if due_date == today
+            [1, "Due today", "is-today"]
+          elsif due_date == tomorrow
+            [2, "Due tomorrow", "is-tomorrow"]
+          else
+            [3, date_label(due), "is-later"]
+          end
+
+        action_candidates[key] ||= {
+          "event" => event,
+          "priority" => priority,
+          "urgency" => urgency,
+          "urgency_class" => urgency_class
+        }
+      end
+
+      next_actions = action_candidates.values.sort_by do |action|
+        [
+          action["priority"],
+          assignment_due_time(action["event"]) || Time.at(0),
+          assignment_name(action["event"])
+        ]
+      end
+      visible_next_actions = next_actions.first(3)
+      remaining_action_count = [next_actions.length - visible_next_actions.length, 0].max
+      completed_upcoming = upcoming.reject do |event|
+        incomplete_upcoming.include?(event)
+      end
+      incomplete_upcoming_by_date = incomplete_upcoming.group_by do |event|
+        assignment_due_time(event).getlocal.to_date
+      end
+      completed_upcoming_by_date = completed_upcoming.group_by do |event|
+        assignment_due_time(event).getlocal.to_date
       end
 
       todo = (data["todo"] || []).sort_by do |item|
@@ -180,11 +227,6 @@
       has_more_calendar_dates = district_calendar_events.count do |event|
         event["end_date"] >= today
       end > important_calendar_dates.length
-      schedule_changes = upcoming_schedule_changes(
-        district_calendar_events,
-        today: today
-      )
-      next_schedule_change = schedule_changes.first
     %>
 
     <%
@@ -219,16 +261,22 @@
         <div class="grade-snapshot-list">
           <% grade_snapshot.each do |grade| %>
             <a
-              class="grade-snapshot-item grade-<%= grade["letter"].downcase %><%= " perfect-grade" if grade["percentage"] >= 100 %>"
+              class="grade-snapshot-item grade-<%= grade["letter"].downcase %>"
               href="#grade-course-<%= h grade["course_id"] %>"
-              title="<%= h grade["name"] %>"
+              style="--grade-progress: <%= [[grade["percentage"], 0].max, 100].min %>%"
             >
-              <span class="grade-snapshot-symbol" aria-hidden="true">
-                <%= grade["symbol"] %>
+              <span class="grade-snapshot-details">
+                <span class="grade-snapshot-course">
+                  <%= h grade["name"] %>
+                </span>
+                <span class="grade-snapshot-score">
+                  <strong><%= grade["percentage"] %>%</strong>
+                  <span class="grade-snapshot-letter"><%= grade["letter"] %></span>
+                </span>
               </span>
-              <span class="sr-only"><%= h grade["name"] %>:</span>
-              <strong><%= grade["percentage"] %>%</strong>
-              <span class="grade-snapshot-letter"><%= grade["letter"] %></span>
+              <span class="grade-snapshot-track" aria-hidden="true">
+                <span class="grade-snapshot-progress"></span>
+              </span>
             </a>
           <% end %>
         </div>
@@ -260,53 +308,78 @@
       </div>
     <% end %>
 
-    <section class="today-summary">
-      <div>
-        <h2 class="dashboard-section-title">Up Next</h2>
+    <section class="today-summary" aria-labelledby="next-actions-heading">
+      <div class="next-actions-header">
+        <div>
+          <h2 class="dashboard-section-title" id="next-actions-heading">
+            What to Do Next
+          </h2>
+          <p>Incomplete work, ordered by urgency.</p>
+        </div>
 
-        <p>
-          <% if due_today.zero? && due_tomorrow.zero? && missing.empty? && next_schedule_change.nil? %>
-            All clear 🎉
-          <% else %>
-            <span class="up-next-items">
-              <% if due_today > 0 %>
-                <span>
-                  <%= due_today %>
-                  <%= due_today == 1 ? "assignment" : "assignments" %>
-                  left today
-                </span>
-              <% end %>
-
-              <% if due_tomorrow > 0 %>
-                <span><%= due_tomorrow %> due tomorrow</span>
-              <% end %>
-
-              <% unless missing.empty? %>
-                <strong><%= missing.length %> missing</strong>
-              <% end %>
-
-              <% if next_schedule_change %>
-                <span>
-                  <span class="schedule-change">
-                    <%= h next_schedule_change["title"] %>
-                    <%= h next_schedule_change["start_date"] == today ? "today" : "on #{next_schedule_change["start_date"].strftime("%a, %b %-d")}" %>
-                  </span>
-                </span>
-              <% end %>
+        <form class="refresh-form" method="post" action="/refresh">
+          <button class="refresh-button" type="submit">
+            <span class="refresh-button-label">↻ Refresh Canvas</span>
+            <span class="refresh-button-progress" aria-hidden="true">
+              <span class="refresh-spinner"></span>
+              Refreshing…
             </span>
-          <% end %>
-        </p>
+          </button>
+        </form>
       </div>
 
-      <form class="refresh-form" method="post" action="/refresh">
-        <button class="refresh-button" type="submit">
-          <span class="refresh-button-label">↻ Refresh Canvas</span>
-          <span class="refresh-button-progress" aria-hidden="true">
-            <span class="refresh-spinner"></span>
-            Refreshing…
-          </span>
-        </button>
-      </form>
+      <% if visible_next_actions.empty? %>
+        <div class="next-actions-empty">
+          <span aria-hidden="true">✓</span>
+          <div>
+            <strong>You're all caught up.</strong>
+            <small>There is no incomplete work due in the next seven days.</small>
+          </div>
+        </div>
+      <% else %>
+        <div class="next-actions-list">
+          <% visible_next_actions.each do |action| %>
+            <%
+              event = action["event"]
+              due = assignment_due_time(event)
+              course_id = assignment_course_id(event)
+              url = assignment_url(event)
+            %>
+            <% if url %>
+              <a class="next-action-card" href="<%= h url %>" target="_blank" rel="noopener noreferrer">
+            <% else %>
+              <div class="next-action-card">
+            <% end %>
+                <span class="next-action-urgency <%= action["urgency_class"] %>">
+                  <%= h action["urgency"] %>
+                </span>
+                <strong><%= h assignment_name(event) %></strong>
+                <span class="next-action-meta">
+                  <%= h display_course_name.call(course_id) %>
+                  <% if due %>
+                    · <%= h due_time_label(due) %>
+                  <% end %>
+                </span>
+                <% if url %>
+                  <span class="next-action-open">Open <span aria-hidden="true">›</span></span>
+                <% end %>
+            <% if url %>
+              </a>
+            <% else %>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+
+        <% if remaining_action_count > 0 %>
+          <a class="next-actions-more" href="#this-week">
+            <%= remaining_action_count %>
+            more <%= remaining_action_count == 1 ? "assignment" : "assignments" %>
+            this week
+            <span aria-hidden="true">↓</span>
+          </a>
+        <% end %>
+      <% end %>
     </section>
 
     <!-- =====================================================
@@ -337,7 +410,7 @@
     <% unless important_calendar_dates.empty? %>
       <section class="section calendar-section">
         <div class="section-header">
-          <h2 class="dashboard-section-title">Important Calendar Dates</h2>
+          <h2 class="dashboard-section-title">Upcoming Schedule Changes</h2>
           <div class="section-header-actions">
             <div class="section-note">Next 30 days</div>
             <% if has_more_calendar_dates %>
@@ -468,10 +541,6 @@
 
       <div class="section-header">
         <h2 class="dashboard-section-title">My To-Dos</h2>
-
-        <div class="section-note">
-          <%= todo.length %> remaining
-        </div>
       </div>
 
       <div class="card todo-card">
@@ -674,186 +743,57 @@
 
     </section>
 
-        <!-- =====================================================
-          Upcoming Assignments
-          ===================================================== -->
+    <!-- =====================================================
+         This Week
+         ===================================================== -->
 
-    <section class="section">
-
+    <section class="section" id="this-week">
       <div class="section-header">
-
-        <h2 class="dashboard-section-title">
-          Upcoming Assignments
-        </h2>
-
-        <div class="section-header-actions">
-          <div class="section-note">
-            <%= upcoming.length %> upcoming
-          </div>
-          <a class="section-action-link" href="/coursework">
-            Manage Manual Assignments
-          </a>
-        </div>
-
+        <h2 class="dashboard-section-title">This Week</h2>
       </div>
 
-      <div class="card">
-
-        <% if upcoming.empty? %>
-
+      <div class="card weekly-assignments">
+        <% if incomplete_upcoming.empty? %>
           <div class="empty-state">
-
-            <div class="empty-check">
-              ✓
-            </div>
-
+            <div class="empty-check">✓</div>
             <div>
-              <strong>
-                Nothing due in the next 7 days.
-              </strong>
-
-              <span>
-                You're all caught up!
-              </span>
+              <strong>Everything due this week is complete.</strong>
+              <span>You're all caught up!</span>
             </div>
-
           </div>
-
         <% else %>
-
-          <% upcoming_by_date.each do |_date, events| %>
-
-            <%
-              first_due = assignment_due_time(events.first)
-              events = events.sort_by do |event|
-                submission = submission_for(
-                  data,
-                  assignment_course_id(event),
-                  assignment_id(event)
-                )
-
-                [submission_complete?(submission) ? 1 : 0,
-                 assignment_due_time(event)]
-              end
-
-              day_complete = events.all? do |event|
-                submission_complete?(
-                  submission_for(
-                    data,
-                    assignment_course_id(event),
-                    assignment_id(event)
-                  )
-                )
-              end
-            %>
-
+          <% incomplete_upcoming_by_date.each do |_date, events| %>
+            <% first_due = assignment_due_time(events.first) %>
             <div class="day-group">
-
-              <div class="day-heading">
-                <%= h date_label(first_due) %>
-              </div>
-
-              <% if day_complete %>
-                <div class="day-complete">
-                  ✓ All done for
-                  <%= h first_due.getlocal.strftime("%A") %>
-                </div>
+              <div class="day-heading"><%= h date_label(first_due) %></div>
+              <% events.sort_by { |item| assignment_due_time(item) }.each do |event| %>
+                <%= render_partial("assignment_row", binding) %>
               <% end %>
-
-              <% events.each do |event| %>
-
-                <%
-                  due = assignment_due_time(event)
-                  course_id = assignment_course_id(event)
-                  aid = assignment_id(event)
-                  url = assignment_url(event)
-
-                  submission = submission_for(
-                    data,
-                    course_id,
-                    aid
-                  )
-
-                  assignment_status =
-                    submission_status(submission)
-
-                  comment = latest_submission_comment(submission)
-
-                  row_class =
-                    if submission_complete?(submission)
-                      "upcoming-row completed"
-                    elsif assignment_status[:css] == "not-submitted"
-                      "upcoming-row needs-work"
-                    else
-                      "upcoming-row"
-                    end
-                %>
-
-                <div class="<%= row_class %>">
-
-                  <div
-                    class="submission-icon <%= assignment_status[:css] %>"
-                  >
-                    <%= assignment_status[:icon] %>
-                  </div>
-
-                  <div class="assignment-main">
-
-                    <div class="assignment-title">
-
-                      <% if url %>
-                        <a
-                          href="<%= h url %>"
-                          target="_blank"
-                        >
-                          <%= h assignment_name(event) %>
-                        </a>
-                      <% else %>
-                        <%= h assignment_name(event) %>
-                      <% end %>
-
-                    </div>
-
-                    <div class="assignment-course">
-                      <%= h display_course_name.call(course_id) %>
-                    </div>
-
-                    <div
-                      class="submission-status <%= assignment_status[:css] %>"
-                    >
-                      <%= h assignment_status[:label] %>
-                      <% if comment %>
-                        · 💬 Feedback
-                      <% end %>
-                    </div>
-
-                    <% if comment %>
-                      <div class="teacher-comment">
-                        <strong>
-                          💬 <%= h(comment["author_name"] || "Teacher") %>:
-                        </strong>
-                        <%= h comment["comment"] %>
-                      </div>
-                    <% end %>
-
-                  </div>
-
-                  <div class="assignment-due">
-                    <%= h due_time_label(due) %>
-                  </div>
-
-                </div>
-
-              <% end %>
-
             </div>
-
           <% end %>
-
         <% end %>
 
-      </div>
+        <% unless completed_upcoming.empty? %>
+          <details class="completed-assignments">
+            <summary>
+              <span>Completed</span>
+              <strong><%= completed_upcoming.length %></strong>
+            </summary>
 
+            <div class="completed-assignments-list">
+              <% completed_upcoming_by_date.each do |_date, events| %>
+                <% first_due = assignment_due_time(events.first) %>
+                <div class="day-group">
+                  <div class="day-heading"><%= h date_label(first_due) %></div>
+                  <% events.sort_by { |item| assignment_due_time(item) }.each do |event| %>
+                    <%= render_partial("assignment_row", binding) %>
+                  <% end %>
+                </div>
+              <% end %>
+            </div>
+          </details>
+        <% end %>
+      </div>
     </section>
 
     <!-- =====================================================
@@ -876,13 +816,6 @@
         <h2 class="dashboard-section-title">
           Grades
         </h2>
-
-        <div class="section-header-actions">
-          <div class="section-note">
-            Official grades override Canvas estimates
-          </div>
-          <a class="section-action-link" href="/grades">Edit Grades</a>
-        </div>
 
       </div>
 
@@ -968,10 +901,6 @@
             possible
           )
 
-          has_edited_grades = submissions.any? do |submission|
-            submission["_official_override"]
-          end
-
           displayed_percentage = calculated
           displayed_letter = letter_grade(displayed_percentage)
 
@@ -1000,9 +929,8 @@
 
               <div class="grade-meta">
                 <% if submissions.empty? %>
-                  No graded Canvas assignments
+                  No graded assignments
                 <% else %>
-                  <%= has_edited_grades ? "Canvas + edited grades" : "Canvas estimate" %> ·
                   <%= submissions.length %>
                   graded <%= submissions.length == 1 ? "assignment" : "assignments" %>
                   ·
@@ -1015,7 +943,7 @@
 
               <a
                 class="grade-card-edit-link"
-                href="/grades?course_id=<%= h CGI.escape(course_id) %>"
+                href="/settings/grades?course_id=<%= h CGI.escape(course_id) %>"
               >
                 Edit this class
               </a>

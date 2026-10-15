@@ -212,26 +212,38 @@ class EmailBackupsTest < Minitest::Test
     text = digest_text_body(digest, now)
 
     assert_equal %w[Science Math], digest["grade_snapshot"].map { |grade| grade["name"] }
-    assert_includes html, "Daily Digest for Avery for October 11, 2026"
+    assert_includes html, "Daily Digest"
+    assert_includes html, "Avery &middot; October 11, 2026"
+    assert_includes html, ">NextStep</td>"
     assert_includes text, "Daily Digest for Avery for October 11, 2026"
     assert_includes html, "Current Grade Snapshot"
     assert_includes html, '<meta name="viewport" content="width=device-width, initial-scale=1">'
     assert_includes html, "@media only screen and (max-width: 600px)"
     assert_includes html, 'class="grade-card-cell"'
-    assert_includes html, "background:#ecfdf3"
+    assert_includes html, "background:#080711"
+    assert_includes html, "background:#11221f"
+    assert_includes html, "background:#4fd6a0"
     assert_includes html, "Missing Worksheet"
+    assert_includes html,
+      'href="https://temecula.instructure.com/courses/1/assignments/30"'
     assert_includes html, "Friday, October 9"
     assert_includes html, "Today Homework"
     assert_includes html, "Tomorrow Project"
-    assert_includes html, "Important Calendar Dates"
+    assert_includes html, "Upcoming Schedule Changes"
     assert_includes html, "Middle School Modified Day"
     assert_includes html, "Middle schools"
     refute_includes html, "Elementary Modified Day"
     assert_operator html.index("Lab"), :<, html.index("Quiz")
+    assert_includes html,
+      'href="https://temecula.instructure.com/courses/2/assignments/20"'
     refute_includes html, "Old Lab"
     assert_includes text, "MISSING WORK"
-    assert_includes text, "IMPORTANT CALENDAR DATES"
+    assert_includes text,
+      "https://temecula.instructure.com/courses/1/assignments/30"
+    assert_includes text, "UPCOMING SCHEDULE CHANGES"
     assert_includes text, "Middle School Modified Day - Thursday, October 15"
+    assert_includes text,
+      "https://temecula.instructure.com/courses/2/assignments/20"
     refute_includes text, "Elementary Modified Day"
     assert_includes text, "GRADES POSTED IN THE LAST 7 DAYS"
   end
@@ -270,15 +282,15 @@ class EmailBackupsTest < Minitest::Test
 
   def test_digest_grade_colors_match_dashboard_grade_palette
     assert_equal(
-      { foreground: "#027a48", background: "#ecfdf3" },
+      { foreground: "#4fd6a0", background: "#11221f", border: "#285746" },
       digest_grade_colors("A")
     )
     assert_equal(
-      { foreground: "#175cd3", background: "#eff8ff" },
+      { foreground: "#58a6ff", background: "#101d2d", border: "#284f78" },
       digest_grade_colors("B")
     )
     assert_equal(
-      { foreground: "#b42318", background: "#fff1f0" },
+      { foreground: "#ff7085", background: "#251319", border: "#6d2f3a" },
       digest_grade_colors("F")
     )
   end
@@ -286,25 +298,25 @@ class EmailBackupsTest < Minitest::Test
   def test_recent_grade_colors_highlight_low_and_perfect_scores
     assert_equal(
       {
-        foreground: "#b42318",
-        background: "#fff1f0",
-        border: "#fecdca"
+        foreground: "#ff7085",
+        background: "#251319",
+        border: "#6d2f3a"
       },
       digest_recent_grade_colors(6, 10)
     )
     assert_equal(
       {
-        foreground: "#8a5a00",
-        background: "#fff7d6",
-        border: "#e8b931"
+        foreground: "#ffc96b",
+        background: "#211c14",
+        border: "#64502b"
       },
       digest_recent_grade_colors(10, 10)
     )
     assert_equal(
       {
-        foreground: "#344054",
-        background: "#ffffff",
-        border: "#eaecf0"
+        foreground: "#f4f2ff",
+        background: "#121020",
+        border: "#29263d"
       },
       digest_recent_grade_colors(9, 10)
     )
@@ -330,7 +342,7 @@ class EmailBackupsTest < Minitest::Test
       delivery[:messages].map { |message| message[:recipient] }
     assert_includes delivery[:messages].first[:message], "multipart/alternative"
     assert_includes delivery[:messages].first[:message],
-      "Subject: School Dashboard Daily Digest for October 11, 2026"
+      "Subject: Avery's NextStep Daily Digest"
   end
 
   def test_backup_and_digest_run_once_at_their_scheduled_hours
@@ -413,6 +425,7 @@ class EmailBackupsTest < Minitest::Test
         "id" => id,
         "course_id" => course_id,
         "name" => name,
+        "html_url" => "/courses/#{course_id}/assignments/#{id}",
         "points_possible" => possible
       }
     }
@@ -424,6 +437,7 @@ class EmailBackupsTest < Minitest::Test
         "id" => id,
         "course_id" => course_id,
         "name" => name,
+        "html_url" => "/courses/#{course_id}/assignments/#{id}",
         "due_at" => due_at
       }
     }

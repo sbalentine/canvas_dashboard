@@ -65,18 +65,22 @@ class AppRoutesTest < Minitest::Test
     chart = request("/chart.umd.min.js")
     navigation = request("/navigation.js")
     manifest = request("/manifest.json")
-    class_names = request("/class-names")
-    grades = request("/grades")
-    scheduled_emails = request("/scheduled-emails")
+    class_names = request("/settings/classes")
+    grades = request("/settings/grades")
+    scheduled_emails = request("/settings/emails")
     settings = request("/settings")
     calendar = request("/calendar")
-    digest_preview = request("/scheduled-emails/digest-preview")
-    backup_download = request("/scheduled-emails/backup-download")
+    calendar_settings = request("/settings/calendar")
+    digest_preview = request("/settings/emails/digest-preview")
+    backup_download = request("/settings/emails/backup-download")
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
     assert_includes dashboard.body, "<title>School Dashboard</title>"
     assert_includes dashboard.body, 'rel="stylesheet"'
+    dashboard_navigation = dashboard.body[/<nav class="dashboard-nav".*?<\/nav>/m]
+    refute_includes dashboard_navigation, ">Grades<"
+    refute_includes dashboard_navigation, 'href="/settings/grades"'
     assert_equal "text/css; charset=utf-8", stylesheet["Content-Type"]
     assert_equal "text/javascript; charset=utf-8", chart["Content-Type"]
     assert_includes chart.body, "Chart.js v4.5.1"
@@ -84,7 +88,7 @@ class AppRoutesTest < Minitest::Test
     assert_includes navigation.body, "dashboard-nav-toggle"
     assert_equal "School Dashboard", JSON.parse(manifest.body)["name"]
     assert_equal "200", class_names.code
-    assert_includes class_names.body, "Class Names"
+    assert_includes class_names.body, "Classes Outside Canvas"
     assert_equal "200", grades.code
     assert_includes grades.body, "Edit Assignment Grades"
     assert_equal "200", scheduled_emails.code
@@ -94,18 +98,25 @@ class AppRoutesTest < Minitest::Test
     assert_equal "200", settings.code
     assert_includes settings.body, "<title>Settings</title>"
     assert_includes settings.body, 'rel="stylesheet"'
-    assert_includes settings.body, "District Calendar"
     assert_includes settings.body, "Scheduled Emails"
+    assert_includes settings.body, 'href="/settings/calendar"'
+    refute_includes settings.body, "Manual Coursework"
+    refute_includes settings.body, "District Calendar"
     assert_includes settings.body, 'class="is-active" href="/settings"'
     assert_equal "200", calendar.code
     assert_includes calendar.body, "<title>School Calendar</title>"
     assert_includes calendar.body, 'rel="stylesheet"'
     assert_includes calendar.body, "School Calendar"
     assert_includes calendar.body, 'class="is-active" href="/calendar"'
+    assert_equal "200", calendar_settings.code
+    assert_includes calendar_settings.body, "<title>Calendar Settings</title>"
+    assert_includes calendar_settings.body, "District Calendar"
+    assert_includes calendar_settings.body, 'class="is-active" href="/settings"'
     assert_equal "200", digest_preview.code
     assert_equal "text/html; charset=utf-8", digest_preview["Content-Type"]
     assert_equal "no-store", digest_preview["Cache-Control"]
-    assert_includes digest_preview.body, "Daily Digest for Avery"
+    assert_includes digest_preview.body, "Daily Digest"
+    assert_includes digest_preview.body, "Avery &middot;"
     assert_includes digest_preview.body, "Current Grade Snapshot"
     assert_equal "200", backup_download.code
     assert_equal "application/zip", backup_download["Content-Type"]
@@ -117,17 +128,17 @@ class AppRoutesTest < Minitest::Test
     assert_equal backup_download.body.bytesize.to_s, backup_download["Content-Length"]
   end
 
-  def test_settings_route_saves_calendar_feed_without_exposing_it_on_dashboard
+  def test_calendar_settings_route_saves_feed_without_exposing_it_on_dashboard
     feed_url = "https://calendar.example.test/private.ics?token=secret"
     saved = request(
-      "/settings",
+      "/settings/calendar",
       Net::HTTP::Post,
       "calendar_feed_url" => feed_url,
       "calendar_excluded_keywords" => "Elementary\nHigh School"
     )
 
     assert_equal "303", saved.code
-    assert_equal "/settings?saved=calendar", URI(saved["Location"]).request_uri
+    assert_equal "/settings/calendar?saved=1", URI(saved["Location"]).request_uri
     assert_equal feed_url, load_school_calendar_settings["feed_url"]
     assert_equal(
       ["Elementary", "High School"],
@@ -141,13 +152,13 @@ class AppRoutesTest < Minitest::Test
     }
     body = request("/").body
 
-    assert_includes body, "Up Next"
+    assert_includes body, "What to Do Next"
     assert_includes body, 'href="/settings"'
     refute_includes body, feed_url
     refute_includes body, "Edit Class Names"
   end
 
-  def test_up_next_shows_only_the_nearest_calendar_change
+  def test_schedule_changes_are_shown_in_the_calendar_section
     feed_url = "https://calendar.example.test/events.ics"
     save_school_calendar_settings(feed_url)
     today = Date.today
@@ -173,16 +184,61 @@ class AppRoutesTest < Minitest::Test
     }
 
     body = request("/").body
-    up_next = body[/<section class="today-summary">.*?<\/section>/m]
+    calendar_section = body[/<section class="section calendar-section">.*?<\/section>/m]
 
-    assert_includes up_next, "First Modified Day"
-    refute_includes up_next, "Second Modified Day"
-    assert_includes body, "Second Modified Day"
+    refute_includes body, "schedule-notice"
+    assert_includes calendar_section, "Upcoming Schedule Changes"
+    assert_includes calendar_section, "First Modified Day"
+    assert_includes calendar_section, "Second Modified Day"
+  end
+
+  def test_next_actions_prioritize_incomplete_work_and_collapse_completed_work
+    now = Time.now
+    assignment = lambda do |id, name, due_at|
+      {
+        "id" => id,
+        "course_id" => 1,
+        "name" => name,
+        "due_at" => due_at.iso8601
+      }
+    end
+    overdue = assignment.call(20, "Overdue worksheet", now - 3600)
+    due_today = assignment.call(21, "Today practice", now + 3600)
+    due_tomorrow = assignment.call(22, "Tomorrow reading", now + 86_400)
+    due_later = assignment.call(23, "Later project", now + 172_800)
+    completed = assignment.call(24, "Finished quiz", now + 259_200)
+
+    $dashboard_data["missing"] = [overdue]
+    $dashboard_data["upcoming"] = [
+      due_today,
+      due_tomorrow,
+      due_later,
+      completed
+    ]
+    $dashboard_data["submissions"] = {
+      "1" => {
+        "24" => { "workflow_state" => "submitted" }
+      }
+    }
+
+    body = request("/").body
+    next_actions = body[/<section class="today-summary".*?<\/section>/m]
+    this_week = body[/<section class="section" id="this-week".*?<\/section>/m]
+
+    assert_operator next_actions.index("Overdue worksheet"), :<, next_actions.index("Today practice")
+    assert_operator next_actions.index("Today practice"), :<, next_actions.index("Tomorrow reading")
+    refute_includes next_actions, "Later project"
+    refute_includes next_actions, "Finished quiz"
+    assert_match(/1\s+more assignment\s+this week/, next_actions)
+    refute_includes this_week, "left to do"
+    refute_includes this_week, "Manage Manual Assignments"
+    assert_includes this_week, "Completed"
+    assert_includes this_week, "Finished quiz"
   end
 
   def test_scheduled_email_route_saves_separate_recipients_and_preferences
     response = request(
-      "/scheduled-emails",
+      "/settings/emails",
       Net::HTTP::Post,
       "action" => "save",
       "backup_recipients" => "backup@example.com",
@@ -192,7 +248,7 @@ class AppRoutesTest < Minitest::Test
     )
 
     assert_equal "303", response.code
-    assert_equal "/scheduled-emails?saved=1", URI(response["Location"]).request_uri
+    assert_equal "/settings/emails?saved=1", URI(response["Location"]).request_uri
     assert_equal(
       {
         "backup_recipients" => ["backup@example.com"],
@@ -208,7 +264,7 @@ class AppRoutesTest < Minitest::Test
 
   def test_scheduled_email_route_reports_missing_gmail_configuration
     response = request(
-      "/scheduled-emails",
+      "/settings/emails",
       Net::HTTP::Post,
       "action" => "send_digest",
       "digest_recipients" => "parent@example.com"
@@ -223,10 +279,10 @@ class AppRoutesTest < Minitest::Test
     response = request("/backups")
 
     assert_equal "303", response.code
-    assert_equal "/scheduled-emails", URI(response["Location"]).request_uri
+    assert_equal "/settings/emails", URI(response["Location"]).request_uri
   end
 
-  def test_grade_snapshot_is_sorted_highest_to_lowest
+  def test_grade_snapshot_is_sorted_alphabetically
     $dashboard_data["courses"] << { "id" => 2, "name" => "Science" }
     $dashboard_data["course_names"]["2"] = "Science"
     $dashboard_data["grades"] << {
@@ -241,13 +297,14 @@ class AppRoutesTest < Minitest::Test
     }
 
     body = request("/").body
+    snapshot = body[/<section class="grade-snapshot".*?<\/section>/m]
 
-    assert_operator body.index("Science:"), :<, body.index("Math:")
+    assert_operator snapshot.index("Math"), :<, snapshot.index("Science")
   end
 
   def test_grade_route_saves_and_clears_official_grades
     saved = request(
-      "/grades",
+      "/settings/grades",
       Net::HTTP::Post,
       "canvas_10_score" => "9.2",
       "canvas_10_points" => "",
@@ -257,12 +314,12 @@ class AppRoutesTest < Minitest::Test
     assert_equal "303", saved.code
     assert_equal 9.2, load_grade_overrides.dig("canvas", "10", "score")
 
-    editor = request("/grades")
+    editor = request("/settings/grades")
     assert_includes editor.body, "assignment-grade-row is-edited"
     assert_includes editor.body, ">Edited<"
 
     cleared = request(
-      "/grades",
+      "/settings/grades",
       Net::HTTP::Post,
       "canvas_10_score" => "",
       "canvas_10_points" => "",
@@ -278,7 +335,7 @@ class AppRoutesTest < Minitest::Test
 
   def test_grade_route_rejects_invalid_percentages
     response = request(
-      "/grades",
+      "/settings/grades",
       Net::HTTP::Post,
       "canvas_10_score" => "invalid",
       "canvas_10_points" => "",
@@ -306,7 +363,7 @@ class AppRoutesTest < Minitest::Test
     original = deep_copy($dashboard_data)
 
     saved = request(
-      "/grades", Net::HTTP::Post,
+      "/settings/grades", Net::HTTP::Post,
       "canvas_10_hidden" => "true",
       "canvas_10_score" => "9"
     )
@@ -316,7 +373,7 @@ class AppRoutesTest < Minitest::Test
     assert_equal 8, load_grade_overrides.dig("canvas", "10", "canvas_score")
     assert_equal original, dashboard_data
 
-    editor = request("/grades?course_id=1")
+    editor = request("/settings/grades?course_id=1")
     assert_equal "200", editor.code
     assert_includes editor.body, "Premature Grade"
     assert_includes editor.body, ">Hidden<"
@@ -350,12 +407,12 @@ class AppRoutesTest < Minitest::Test
   end
 
   def test_hidden_assignment_can_be_restored_manually
-    saved = request("/grades", Net::HTTP::Post, "canvas_10_hidden" => "true")
+    saved = request("/settings/grades", Net::HTTP::Post, "canvas_10_hidden" => "true")
     assert_equal "303", saved.code
     refute_includes request("/").body, ">Quiz<"
 
     restored = request(
-      "/grades", Net::HTTP::Post,
+      "/settings/grades", Net::HTTP::Post,
       "canvas_10_score" => "", "canvas_10_points" => ""
     )
 
@@ -366,7 +423,7 @@ class AppRoutesTest < Minitest::Test
 
   def test_grade_route_adds_infinite_campus_only_assignment
     response = request(
-      "/grades",
+      "/settings/grades",
       Net::HTTP::Post,
       "canvas_10_score" => "",
       "canvas_10_points" => "",
@@ -427,7 +484,7 @@ class AppRoutesTest < Minitest::Test
       }
     )
 
-    editor = request("/grades?course_id=1")
+    editor = request("/settings/grades?course_id=1")
 
     assert_equal "200", editor.code
     assert_includes editor.body, "Edit Math Grades"
@@ -437,7 +494,7 @@ class AppRoutesTest < Minitest::Test
     refute_includes editor.body, "Science Test"
 
     saved = request(
-      "/grades",
+      "/settings/grades",
       Net::HTTP::Post,
       "course_id" => "1",
       "canvas_10_score" => "9.5",
@@ -460,12 +517,12 @@ class AppRoutesTest < Minitest::Test
   def test_dashboard_links_each_grade_card_to_its_editor
     dashboard = request("/")
 
-    assert_includes dashboard.body, "/grades?course_id=1"
+    assert_includes dashboard.body, "/settings/grades?course_id=1"
     assert_includes dashboard.body, "Edit this class"
   end
 
   def test_grade_editor_rejects_unknown_class
-    response = request("/grades?course_id=missing")
+    response = request("/settings/grades?course_id=missing")
 
     assert_equal "404", response.code
     assert_equal "Class not found", response.body
@@ -482,9 +539,9 @@ class AppRoutesTest < Minitest::Test
     assert_equal "no-cache", response["Cache-Control"]
   end
 
-  def test_manual_coursework_routes_add_class_and_assignment
+  def test_class_and_grade_routes_add_manual_class_and_assignment
     course_response = request(
-      "/coursework",
+      "/settings/classes",
       Net::HTTP::Post,
       "action" => "create_course",
       "name" => "Piano"
@@ -494,7 +551,7 @@ class AppRoutesTest < Minitest::Test
     course_id = load_manual_coursework.fetch("courses").keys.first
 
     assignment_response = request(
-      "/coursework",
+      "/settings/grades",
       Net::HTTP::Post,
       "action" => "create_assignment",
       "course_id" => course_id,
@@ -504,18 +561,21 @@ class AppRoutesTest < Minitest::Test
 
     assert_equal "303", assignment_response.code
 
-    editor = request("/coursework")
+    classes = request("/settings/classes")
+    grades = request("/settings/grades")
     dashboard = request("/")
 
-    assert_includes editor.body, "Piano"
-    assert_includes editor.body, "Practice scales"
+    assert_equal "/settings/classes", URI(course_response["Location"]).request_uri
+    assert_equal "/settings/grades", URI(assignment_response["Location"]).request_uri
+    assert_includes classes.body, "Piano"
+    assert_includes grades.body, "Practice scales"
     assert_includes dashboard.body, "Practice scales"
     assert_includes dashboard.body, "Piano"
   end
 
-  def test_manual_coursework_route_validates_assignment_course
+  def test_grade_route_validates_manual_assignment_course
     response = request(
-      "/coursework",
+      "/settings/grades",
       Net::HTTP::Post,
       "action" => "create_assignment",
       "course_id" => "missing",
@@ -525,6 +585,12 @@ class AppRoutesTest < Minitest::Test
 
     assert_equal "422", response.code
     assert_includes response.body, "valid class"
+  end
+
+  def test_removed_settings_routes_return_not_found
+    %w[/grades /class-names /scheduled-emails /coursework].each do |path|
+      assert_equal "404", request(path).code
+    end
   end
 
   def test_class_settings_hide_and_restore_canvas_course
@@ -538,7 +604,7 @@ class AppRoutesTest < Minitest::Test
     }]
 
     hidden = request(
-      "/class-names",
+      "/settings/classes",
       Net::HTTP::Post,
       "course_1" => "",
       "hidden_course_1" => "true"
@@ -547,14 +613,14 @@ class AppRoutesTest < Minitest::Test
     assert_equal "303", hidden.code
     assert_equal ["1"], load_hidden_course_ids
     refute_includes request("/").body, "Homework"
-    refute_includes request("/grades").body, "Quiz"
+    refute_includes request("/settings/grades").body, "Quiz"
 
-    settings = request("/class-names")
+    settings = request("/settings/classes")
     assert_includes settings.body, "Math"
     assert_match(/hidden_course_1[^>]+checked/, settings.body)
 
     restored = request(
-      "/class-names",
+      "/settings/classes",
       Net::HTTP::Post,
       "course_1" => ""
     )

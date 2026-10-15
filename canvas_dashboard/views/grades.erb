@@ -1,9 +1,20 @@
 <%
+  coursework = load_manual_coursework if !defined?(coursework) || coursework.nil?
   selected_course_id = nil unless defined?(selected_course_id)
   selected_course = nil unless defined?(selected_course)
   selected_course_name =
     if selected_course
       mappings.fetch(selected_course["id"].to_s, selected_course["name"])
+    end
+  manual_selected_course_id =
+    if selected_course&.fetch("_manual", false)
+      selected_course_id.delete_prefix("manual-")
+    end
+  show_manual_assignments =
+    selected_course_id.nil? || !manual_selected_course_id.nil?
+  visible_manual_courses =
+    coursework["courses"].select do |id, _course|
+      manual_selected_course_id.nil? || id == manual_selected_course_id
     end
 %>
 <!doctype html>
@@ -25,7 +36,7 @@
 <body>
   <main class="container settings-page grade-settings-page">
     <%
-      navigation_active = "grades"
+      navigation_active = "settings"
     %>
     <%= render_partial("navigation", binding) %>
 
@@ -35,27 +46,27 @@
           <%= selected_course ? "Edit #{h selected_course_name} Grades" : "Edit Assignment Grades" %>
         </h1>
         <div class="subtitle">
-          Adjust stale Canvas values or add grades that only appear in Infinite Campus.
+          Correct scores, add external grades, and manage assignments outside Canvas.
         </div>
       </div>
 
     </header>
 
     <nav class="grade-course-filter" aria-label="Choose a class">
-      <a class="<%= "is-selected" unless selected_course %>" href="/grades">
+      <a class="<%= "is-selected" unless selected_course %>" href="/settings/grades">
         All Classes
       </a>
       <% (data["courses"] || []).sort_by { |course| course["name"] }.each do |course| %>
         <a
           class="<%= "is-selected" if selected_course_id == course["id"].to_s %>"
-          href="/grades?course_id=<%= h CGI.escape(course["id"].to_s) %>"
+          href="/settings/grades?course_id=<%= h CGI.escape(course["id"].to_s) %>"
         >
           <%= h mappings.fetch(course["id"].to_s, course["name"]) %>
         </a>
       <% end %>
     </nav>
 
-    <form class="grade-settings" method="post" action="/grades">
+    <form class="grade-settings" method="post" action="/settings/grades">
       <% if selected_course_id %>
         <input type="hidden" name="course_id" value="<%= h selected_course_id %>">
       <% end %>
@@ -372,6 +383,137 @@
         <button type="submit">Save Assignment Grades</button>
       </div>
     </form>
+
+    <% if show_manual_assignments %>
+      <section class="card coursework-settings-section manual-assignment-settings">
+        <h2>Assignments Outside Canvas</h2>
+        <p class="settings-intro">
+          Add upcoming work for classes managed in NextStep.
+        </p>
+
+        <div class="coursework-list">
+          <%
+            assignments = coursework["assignments"].select do |_id, assignment|
+              manual_selected_course_id.nil? ||
+                assignment["course_id"] == manual_selected_course_id
+            end.sort_by do |_id, assignment|
+              assignment["due_at"]
+            end
+          %>
+          <% assignments.each do |id, assignment| %>
+            <form class="coursework-row assignment-coursework-row" method="post" action="/settings/grades">
+              <input type="hidden" name="action" value="update_assignment">
+              <input type="hidden" name="id" value="<%= h id %>">
+              <% if selected_course_id %>
+                <input type="hidden" name="selected_course_id" value="<%= h selected_course_id %>">
+              <% end %>
+
+              <label class="coursework-name-field">
+                <span>Assignment</span>
+                <input
+                  type="text"
+                  name="name"
+                  value="<%= h assignment["name"] %>"
+                  maxlength="255"
+                  required
+                >
+              </label>
+
+              <label>
+                <span>Class</span>
+                <select name="course_id" required>
+                  <% visible_manual_courses.sort_by { |_course_id, course| course["name"] }.each do |course_id, course| %>
+                    <option
+                      value="<%= h course_id %>"
+                      <%= "selected" if course_id == assignment["course_id"] %>
+                    >
+                      <%= h course["name"] %>
+                    </option>
+                  <% end %>
+                </select>
+              </label>
+
+              <label>
+                <span>Due</span>
+                <input
+                  type="datetime-local"
+                  name="due_at"
+                  value="<%= h Time.parse(assignment["due_at"]).getlocal.strftime("%Y-%m-%dT%H:%M") %>"
+                  required
+                >
+              </label>
+
+              <label class="coursework-completed-field">
+                <input
+                  type="checkbox"
+                  name="completed"
+                  value="true"
+                  <%= "checked" if assignment["completed"] %>
+                >
+                <span>Completed</span>
+              </label>
+
+              <div class="coursework-row-actions">
+                <button type="submit">Save</button>
+                <button
+                  class="danger-button"
+                  type="submit"
+                  name="action"
+                  value="delete_assignment"
+                >
+                  Remove
+                </button>
+              </div>
+            </form>
+          <% end %>
+        </div>
+
+        <% if visible_manual_courses.empty? %>
+          <p class="settings-help">
+            Add a class outside Canvas from <a href="/settings/classes">Classes</a> before creating assignments.
+          </p>
+        <% else %>
+          <form class="coursework-create-form assignment-coursework-row" method="post" action="/settings/grades">
+            <input type="hidden" name="action" value="create_assignment">
+            <% if selected_course_id %>
+              <input type="hidden" name="selected_course_id" value="<%= h selected_course_id %>">
+            <% end %>
+
+            <label class="coursework-name-field">
+              <span>New assignment</span>
+              <input
+                type="text"
+                name="name"
+                maxlength="255"
+                placeholder="Assignment name"
+                required
+              >
+            </label>
+
+            <label>
+              <span>Class</span>
+              <select name="course_id" required>
+                <% visible_manual_courses.sort_by { |_id, course| course["name"] }.each do |id, course| %>
+                  <option value="<%= h id %>"><%= h course["name"] %></option>
+                <% end %>
+              </select>
+            </label>
+
+            <label>
+              <span>Due</span>
+              <input
+                type="datetime-local"
+                name="due_at"
+                value="<%= (Time.now + 86_400).getlocal.strftime("%Y-%m-%dT%H:%M") %>"
+                required
+              >
+            </label>
+
+            <button type="submit">+ Add Assignment</button>
+          </form>
+        <% end %>
+      </section>
+    <% end %>
   </main>
 
   <script>
