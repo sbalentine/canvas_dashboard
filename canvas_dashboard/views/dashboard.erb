@@ -1374,7 +1374,42 @@
             scales: {
               x: {
                 type: "linear",
-                display: false
+                display: true,
+                afterBuildTicks(axis) {
+                  const months = new Map();
+
+                  course.points.forEach((point) => {
+                    const date = new Date(point.x);
+                    const key = `${date.getFullYear()}-${date.getMonth()}`;
+
+                    if (!months.has(key)) months.set(key, point.x);
+                  });
+
+                  axis.ticks = [...months.values()].map((value) => ({
+                    value
+                  }));
+                },
+                border: {
+                  display: false
+                },
+                grid: {
+                  display: false
+                },
+                ticks: {
+                  color: "#77748d",
+                  maxRotation: 0,
+                  padding: 6,
+                  font: {
+                    size: 9,
+                    weight: "600"
+                  },
+                  callback(value) {
+                    return new Date(value).toLocaleDateString(
+                      undefined,
+                      { month: "short" }
+                    );
+                  }
+                }
               },
               y: {
                 display: true,
