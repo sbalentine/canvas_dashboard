@@ -605,22 +605,6 @@ Once the changes are working locally, increase the version in `emberguide/config
 
 ---
 
-# Planned Improvements
-
-Some useful next steps for the dashboard include:
-
-* 🏠 Daily "Today" summary
-* ⏳ Unsubmitted assignments shown before completed work
-* ✅ "All done" indicators for completed days
-* 📉 Grade attention indicators
-* 🔄 Manual Canvas refresh button
-* 💬 Teacher submission comments
-* 🔔 Home Assistant notifications for unfinished work
-* 🔑 Home Assistant token-expiration notifications
-* 📡 Machine-readable dashboard status endpoint
-
----
-
 # Disclaimer
 
 This is an independent personal project using the Canvas LMS API.
