@@ -115,6 +115,8 @@ class AppRoutesTest < Minitest::Test
     dashboard_navigation = dashboard.body[/<nav class="dashboard-nav".*?<\/nav>/m]
     refute_includes dashboard_navigation, ">Grades<"
     refute_includes dashboard_navigation, 'href="/settings/grades"'
+    assert_includes dashboard_navigation, "<svg"
+    refute_includes dashboard_navigation, '<img src="/emberguide-icon.png"'
     assert_equal "text/css; charset=utf-8", stylesheet["Content-Type"]
     assert_equal "text/javascript; charset=utf-8", chart["Content-Type"]
     assert_includes chart.body, "Chart.js v4.5.1"
