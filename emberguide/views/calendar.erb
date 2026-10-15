@@ -24,9 +24,118 @@
     <header class="settings-header">
       <div>
         <h1>School Calendar</h1>
-        <div class="subtitle">Upcoming dates from the configured district calendar.</div>
+        <div class="subtitle">Browse important dates from the configured district calendar.</div>
       </div>
     </header>
+
+    <section class="card calendar-month-card" aria-labelledby="calendar-month-heading">
+      <header class="calendar-month-header">
+        <a
+          href="/calendar?month=<%= previous_calendar_month.strftime("%Y-%m") %>"
+          aria-label="View <%= previous_calendar_month.strftime("%B %Y") %>"
+        >
+          <span aria-hidden="true">‹</span>
+          Previous
+        </a>
+        <h2 id="calendar-month-heading"><%= calendar_month.strftime("%B %Y") %></h2>
+        <a
+          href="/calendar?month=<%= next_calendar_month.strftime("%Y-%m") %>"
+          aria-label="View <%= next_calendar_month.strftime("%B %Y") %>"
+        >
+          Next
+          <span aria-hidden="true">›</span>
+        </a>
+      </header>
+
+      <div class="calendar-month-weekdays" aria-hidden="true">
+        <% %w[Sun Mon Tue Wed Thu Fri Sat].each do |weekday| %>
+          <span><%= weekday %></span>
+        <% end %>
+      </div>
+
+      <div class="calendar-month-grid">
+        <% calendar_days.each do |date| %>
+          <%
+            day_events = calendar_events_by_date[date]
+            day_classes = ["calendar-month-day"]
+            day_classes << "is-outside-month" if date.month != calendar_month.month
+            day_classes << "is-today" if date == today
+            day_classes << "has-events" unless day_events.empty?
+            event_count_label =
+              "#{day_events.length} #{day_events.length == 1 ? "event" : "events"}"
+            date_label = date.strftime("%A, %B %-d, %Y")
+          %>
+          <% if day_events.any? %>
+            <button
+              class="<%= day_classes.join(" ") %>"
+              type="button"
+              data-calendar-date="<%= date.iso8601 %>"
+              aria-controls="calendar-events-<%= date.iso8601 %>"
+              aria-expanded="false"
+              aria-label="<%= h "#{date_label}, #{event_count_label}" %>"
+            >
+          <% else %>
+            <div
+              class="<%= day_classes.join(" ") %>"
+              data-date="<%= date.iso8601 %>"
+            >
+          <% end %>
+            <time datetime="<%= date.iso8601 %>"><%= date.day %></time>
+            <% if day_events.any? %>
+              <span class="calendar-month-event-count">
+                <strong><%= day_events.length %></strong>
+                <span><%= day_events.length == 1 ? "event" : "events" %></span>
+              </span>
+            <% end %>
+          <% if day_events.any? %>
+            </button>
+          <% else %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+
+      <div class="calendar-month-details" aria-live="polite">
+        <% calendar_event_dates = calendar_days.select { |date| calendar_events_by_date[date].any? } %>
+        <p class="calendar-month-details-prompt">
+          <% if calendar_event_dates.empty? %>
+            No events this month.
+          <% else %>
+            Select a highlighted date to see its events.
+          <% end %>
+        </p>
+        <% calendar_event_dates.each do |date| %>
+          <% day_events = calendar_events_by_date[date] %>
+
+          <section
+            id="calendar-events-<%= date.iso8601 %>"
+            class="calendar-month-day-details"
+            hidden
+          >
+            <h3><%= date.strftime("%A, %B %-d") %></h3>
+            <div class="calendar-month-day-event-list">
+              <% day_events.each do |event| %>
+                <article class="calendar-month-day-event">
+                  <strong><%= h event["title"] %></strong>
+                  <span>
+                    <% if event["end_date"] > event["start_date"] %>
+                      <%= event["start_date"].strftime("%b %-d") %>–<%= event["end_date"].strftime("%b %-d") %>
+                    <% else %>
+                      <%= event["start_date"].strftime("%A") %>
+                    <% end %>
+                    <% unless event["location"].empty? %>
+                      · <%= h event["location"] %>
+                    <% end %>
+                  </span>
+                </article>
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+      </div>
+    </section>
+
+    <h2 class="calendar-list-heading">Upcoming Events</h2>
 
     <% if calendar_events.empty? %>
       <div class="card empty-state">
@@ -62,5 +171,38 @@
       </div>
     <% end %>
   </main>
+
+  <script>
+    const calendarDateButtons = document.querySelectorAll("[data-calendar-date]");
+    const calendarDetailsPrompt = document.querySelector(".calendar-month-details-prompt");
+    const calendarDayDetails = document.querySelectorAll(".calendar-month-day-details");
+
+    calendarDateButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const selectedDate = button.dataset.calendarDate;
+
+        calendarDateButtons.forEach((dateButton) => {
+          dateButton.setAttribute(
+            "aria-expanded",
+            String(dateButton === button)
+          );
+        });
+        calendarDayDetails.forEach((details) => {
+          details.hidden = details.id !== `calendar-events-${selectedDate}`;
+        });
+        calendarDetailsPrompt.hidden = true;
+
+        const selectedDetails = document.getElementById(
+          `calendar-events-${selectedDate}`
+        );
+        if (window.matchMedia("(max-width: 700px)").matches) {
+          selectedDetails.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest"
+          });
+        }
+      });
+    });
+  </script>
 </body>
 </html>

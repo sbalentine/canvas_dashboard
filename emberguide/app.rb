@@ -195,6 +195,17 @@ end
 # School Calendar
 # ============================================================
 
+def requested_calendar_month(value, today: Date.today)
+  return Date.new(today.year, today.month, 1) if value.to_s.empty?
+
+  match = value.to_s.match(/\A(\d{4})-(\d{2})\z/)
+  raise ArgumentError, "Invalid calendar month." unless match
+
+  Date.new(match[1].to_i, match[2].to_i, 1)
+rescue Date::Error
+  raise ArgumentError, "Invalid calendar month."
+end
+
 server.mount_proc "/calendar" do |request, response|
   if request.request_method != "GET"
     response.status = 405
@@ -204,15 +215,39 @@ server.mount_proc "/calendar" do |request, response|
   end
 
   today = Date.today
-  calendar_events = school_calendar_events.select do |event|
+  all_calendar_events = school_calendar_events
+  calendar_events = all_calendar_events.select do |event|
     event["end_date"] >= today
   end
+  calendar_month = requested_calendar_month(request.query["month"], today: today)
+  calendar_month_end = (calendar_month >> 1) - 1
+  calendar_grid_start = calendar_month - calendar_month.wday
+  calendar_grid_end = calendar_month_end + (6 - calendar_month_end.wday)
+  calendar_events_by_date = Hash.new { |events, date| events[date] = [] }
+
+  all_calendar_events.each do |event|
+    event_start = [event["start_date"], calendar_grid_start].max
+    event_end = [event["end_date"], calendar_grid_end].min
+    next if event_start > event_end
+
+    event_start.upto(event_end) do |date|
+      calendar_events_by_date[date] << event
+    end
+  end
+
+  calendar_days = calendar_grid_start.upto(calendar_grid_end).to_a
+  previous_calendar_month = calendar_month << 1
+  next_calendar_month = calendar_month >> 1
   template = ERB.new(File.read(File.join(APP_ROOT, "views", "calendar.erb")))
 
   response.status = 200
   response["Content-Type"] = "text/html; charset=utf-8"
   response["Cache-Control"] = "no-cache"
   response.body = template.result(binding)
+rescue ArgumentError => e
+  response.status = 422
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = e.message
 rescue => e
   puts "School calendar error: #{e.class}: #{e.message}"
 

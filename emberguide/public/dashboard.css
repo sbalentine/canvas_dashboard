@@ -1758,6 +1758,185 @@ a:hover {
   padding: 2px 18px;
 }
 
+.calendar-month-card {
+  margin-bottom: 28px;
+  padding: 20px;
+}
+
+.calendar-month-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.calendar-month-header h2 {
+  margin: 0;
+  font-size: 24px;
+  text-align: center;
+}
+
+.calendar-month-header a {
+  color: var(--purple);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.calendar-month-header a:last-child {
+  text-align: right;
+}
+
+.calendar-month-weekdays,
+.calendar-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.calendar-month-weekdays {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.calendar-month-grid {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--border);
+  gap: 1px;
+}
+
+.calendar-month-day {
+  position: relative;
+  min-width: 0;
+  min-height: 82px;
+  padding: 10px;
+  background: var(--card);
+}
+
+button.calendar-month-day {
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+button.calendar-month-day:hover,
+button.calendar-month-day:focus-visible {
+  z-index: 1;
+  outline: 2px solid rgba(184, 182, 255, 0.72);
+  outline-offset: -2px;
+}
+
+button.calendar-month-day[aria-expanded="true"] {
+  z-index: 1;
+  box-shadow: inset 0 0 0 2px #ffc96b;
+}
+
+.calendar-month-day time {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.calendar-month-day.is-outside-month {
+  background: rgba(12, 11, 23, 0.56);
+  color: var(--muted);
+}
+
+.calendar-month-day.is-today time {
+  background: var(--purple);
+  color: #fff;
+}
+
+.calendar-month-day.has-events {
+  background:
+    linear-gradient(145deg, rgba(133, 131, 255, 0.2), rgba(133, 131, 255, 0.06)),
+    var(--card);
+}
+
+.calendar-month-day.has-events::after {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #ffc96b;
+  content: "";
+  box-shadow: 0 0 12px rgba(255, 201, 107, 0.5);
+}
+
+.calendar-month-event-count {
+  display: block;
+  margin-top: 8px;
+  color: #b8b6ff;
+  font-size: 11px;
+}
+
+.calendar-month-event-count strong,
+.calendar-month-event-count span {
+  font: inherit;
+}
+
+.calendar-month-details {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(12, 11, 23, 0.58);
+}
+
+.calendar-month-details-prompt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.calendar-month-day-details h3 {
+  margin: 0 0 12px;
+  font-size: 17px;
+}
+
+.calendar-month-day-event-list {
+  display: grid;
+  gap: 8px;
+}
+
+.calendar-month-day-event {
+  padding: 11px 12px;
+  border-left: 3px solid #ffc96b;
+  border-radius: 7px;
+  background: rgba(133, 131, 255, 0.1);
+}
+
+.calendar-month-day-event strong,
+.calendar-month-day-event span {
+  display: block;
+}
+
+.calendar-month-day-event span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.calendar-list-heading {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
 .calendar-row {
   display: grid;
   grid-template-columns: 52px minmax(0, 1fr);
@@ -2662,6 +2841,51 @@ a:hover {
   .grade-card {
     border-radius: 15px;
     padding: 17px;
+  }
+
+  .calendar-month-card {
+    padding: 14px;
+  }
+
+  .calendar-month-header {
+    margin-bottom: 16px;
+  }
+
+  .calendar-month-header h2 {
+    font-size: 20px;
+  }
+
+  .calendar-month-header a {
+    font-size: 0;
+  }
+
+  .calendar-month-header a span {
+    font-size: 24px;
+  }
+
+  .calendar-month-day {
+    min-height: 52px;
+    padding: 6px;
+  }
+
+  .calendar-month-day time {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .calendar-month-day.has-events::after {
+    top: auto;
+    right: 8px;
+    bottom: 7px;
+  }
+
+  .calendar-month-event-count {
+    display: none;
+  }
+
+  .calendar-month-details {
+    padding: 12px;
   }
 
   .grade-trend-grid {

@@ -278,6 +278,43 @@ class AppRoutesTest < Minitest::Test
     assert_includes calendar_section, "Second Modified Day"
   end
 
+  def test_calendar_page_renders_navigable_month_grid_with_event_days
+    feed_url = "https://calendar.example.test/events.ics"
+    save_school_calendar_settings(feed_url)
+    today = Date.today
+    calendar_month = Date.new(today.year, today.month, 1)
+    event_start = calendar_month + 9
+    event_end = event_start + 1
+    $school_calendar_cache = {
+      feed_url: feed_url,
+      fetched_at: Time.now,
+      events: [
+        {
+          "title" => "Fall Break",
+          "description" => "",
+          "location" => "",
+          "start_date" => event_start,
+          "end_date" => event_end
+        }
+      ]
+    }
+
+    body = request(
+      "/calendar?month=#{calendar_month.strftime("%Y-%m")}"
+    ).body
+
+    assert_includes body, calendar_month.strftime("%B %Y")
+    assert_includes body, "/calendar?month=#{(calendar_month << 1).strftime("%Y-%m")}"
+    assert_includes body, "/calendar?month=#{(calendar_month >> 1).strftime("%Y-%m")}"
+    assert_includes body, "calendar-month-day has-events"
+    assert_includes body, "data-calendar-date=\"#{event_start.iso8601}\""
+    assert_includes body, "aria-controls=\"calendar-events-#{event_start.iso8601}\""
+    assert_includes body, "id=\"calendar-events-#{event_start.iso8601}\""
+    assert_includes body, "Select a highlighted date to see its events."
+    assert_includes body, "Fall Break"
+    assert_equal "422", request("/calendar?month=not-a-month").code
+  end
+
   def test_next_actions_prioritize_incomplete_work_and_collapse_completed_work
     now = Time.now
     assignment = lambda do |id, name, due_at|
