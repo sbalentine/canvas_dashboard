@@ -23,26 +23,54 @@ It was designed to run continuously as a **Home Assistant add-on on a Raspberry 
 
 ---
 
-## Screenshot
+## Product tour
 
-*Add a screenshot here once the dashboard is set up.*
+> **Demo data:** Every grade, assignment, date, and score shown below is
+> illustrative data created for the EmberGuide demo. The displayed profile does
+> not contain a real student's academic record.
 
-```text
-┌─────────────────────────────────────────────┐
-│ 🔥 EmberGuide                               │
-│ Monday, September 15                        │
-│                                             │
-│ ⚠️ Missing Assignments                     │
-│                                             │
-│ 📅 Next 7 Days                             │
-│   Math Homework                    5:00 PM   │
-│   ✓ Science Assignment          Submitted   │
-│                                             │
-│ 📊 Grades                                   │
-│   Math                              94.2%    │
-│   Language Arts                     91.8%    │
-└─────────────────────────────────────────────┘
-```
+### See the whole school day at a glance
+
+![EmberGuide dashboard with grade snapshot and prioritized assignments](docs/screenshots/dashboard-overview.png)
+
+EmberGuide turns a busy Canvas account into one calm starting point. The
+dashboard combines current course averages with a short, urgency-ordered list
+of what needs attention next, so students can answer “What should I work on?”
+without opening every class.
+
+### Keep small responsibilities from slipping through
+
+![Student to-do list with classes, dates, and completion controls](docs/screenshots/student-todos.png)
+
+Canvas planner notes and personal reminders live together in a focused to-do
+list. Students can add, edit, and complete items directly from the dashboard,
+while course labels and due times keep each task grounded in the school day.
+
+### Make the rest of the week predictable
+
+![Upcoming assignments grouped by day with submission status](docs/screenshots/weekly-assignments.png)
+
+The seven-day view groups assignments by date and shows the class, due time,
+and submission status at a glance. Canvas work and manually tracked classes
+share the same timeline, giving families one dependable view of the week ahead.
+
+### Show progress as a trend, not a verdict
+
+![Grade trend charts for six classes on an A through F scale](docs/screenshots/grade-trends.png)
+
+Encouraging Chart.js cards place every class on the same A–F scale and rebuild
+the cumulative grade after each assignment. Students can see whether a class
+is steady, improving, or needs attention without overreacting to a single
+score.
+
+### Explain the number behind the letter
+
+![Detailed mathematics grade card with recent assignment scores](docs/screenshots/assignment-grades.png)
+
+Course details connect the overall percentage to the assignments that produced
+it. Recent scores, points possible, dates, and percentages make the estimate
+easy to understand, while local grade editing supports corrections and work
+tracked outside Canvas.
 
 ---
 
