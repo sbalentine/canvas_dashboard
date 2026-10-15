@@ -97,14 +97,37 @@ class DemoDataTest < Minitest::Test
         .map { |assignment| assignment["completed"] }
         .sort_by(&:to_s)
 
-    music_grades = overrides.fetch("custom").values.select do |grade|
+    custom_grades = overrides.fetch("custom").values
+    music_grades = custom_grades.select do |grade|
       grade["course_id"] == "manual-demo-course-1"
     end
-    assert_equal 4, music_grades.length
+    assert_equal 8, music_grades.length
     assert_in_delta 87.5,
       music_grades.sum { |grade| grade["score"].to_f } /
         music_grades.sum { |grade| grade["points_possible"].to_f } * 100,
       0.01
+
+    all_grades = cache.fetch("grades") + custom_grades.map do |grade|
+      {
+        "score" => grade["score"],
+        "assignment" => {
+          "course_id" => grade["course_id"],
+          "points_possible" => grade["points_possible"]
+        }
+      }
+    end
+    all_grades.each do |grade|
+      next if grade["score"].nil?
+
+      assert_operator grade["score"], :>=, 0
+      assert_operator grade["score"], :<=,
+        grade.dig("assignment", "points_possible")
+    end
+    all_grades.group_by do |grade|
+      grade.dig("assignment", "course_id")
+    end.each_value do |grades|
+      assert_operator grades.count { |grade| !grade["score"].nil? }, :>=, 8
+    end
   end
 
   def test_prepare_runtime_shifts_dates_and_isolates_writable_files

@@ -79,7 +79,7 @@ COURSE_GRADE_TARGETS = {
   "Science" => 84,
   "Social Studies" => 90,
   "Art" => 94,
-  "Physical Education" => 90
+  "Physical Education" => 91
 }.freeze
 
 def read_json(file_name, default)
@@ -169,10 +169,33 @@ class Anonymizer
       ["Rhythm and Meter Quiz", 18, 20, -24],
       ["Listening Analysis", 42, 50, -17],
       ["Scale Check-In", 17, 20, -10],
-      ["Composition Reflection", 28, 30, -3]
+      ["Composition Reflection", 28, 30, -3],
+      ["Note Reading Check", 17, 20, -31],
+      ["Instrument Families Quiz", 18, 20, -27],
+      ["Melody Exercise", 16, 20, -14],
+      ["Performance Reflection", 19, 20, -7]
     ].each_with_index do |(name, score, points_possible, day_offset), index|
       custom["demo-music-grade-#{index + 1}"] = {
         "course_id" => "manual-demo-course-1",
+        "name" => name,
+        "score" => score,
+        "points_possible" => points_possible,
+        "graded_at" => demo_time(day_offset, 12, 0).split("T").first
+      }
+    end
+
+    science_course_id = map_course_id(@course_names.key("Science"))
+    [
+      ["Ecosystem Vocabulary", 20, 25, -35],
+      ["Food Web Diagram", 22, 25, -30],
+      ["Energy Flow Notes", 21, 25, -25],
+      ["Habitat Investigation", 23, 25, -20],
+      ["Population Graph", 19, 25, -15],
+      ["Lab Safety Check", 21.5, 25, -9],
+      ["Evidence Reflection", 20.5, 25, -4]
+    ].each_with_index do |(name, score, points_possible, day_offset), index|
+      custom["demo-science-grade-#{index + 1}"] = {
+        "course_id" => science_course_id,
         "name" => name,
         "score" => score,
         "points_possible" => points_possible,
@@ -420,8 +443,45 @@ class Anonymizer
       target = COURSE_GRADE_TARGETS.fetch(course_name, 90)
       scale = (possible * target / 100.0) / earned
       included.each do |submission|
-        submission["score"] = (submission["score"].to_f * scale).round(2)
+        points = submission.dig("assignment", "points_possible").to_f
+        submission["score"] = [
+          [submission["score"].to_f * scale, 0].max,
+          points
+        ].min
       end
+
+      adjusted_earned = included.sum { |submission| submission["score"] }
+      difference = (possible * target / 100.0) - adjusted_earned
+      capacities = included.map do |submission|
+        points = submission.dig("assignment", "points_possible").to_f
+        if difference.positive?
+          points - submission["score"]
+        else
+          submission["score"]
+        end
+      end
+      total_capacity = capacities.sum
+
+      if total_capacity.positive?
+        included.zip(capacities).each do |submission, capacity|
+          adjustment = difference * capacity / total_capacity
+          points = submission.dig("assignment", "points_possible").to_f
+          submission["score"] = [
+            [submission["score"] + adjustment, 0].max,
+            points
+          ].min.round(2)
+        end
+      end
+    end
+
+    grades.each do |submission|
+      points = submission.dig("assignment", "points_possible")
+      next if submission["score"].nil? || points.nil?
+
+      submission["score"] = [
+        [submission["score"].to_f, 0].max,
+        points.to_f
+      ].min.round(2)
     end
   end
 end

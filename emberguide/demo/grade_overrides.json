@@ -35,6 +35,83 @@
       "score": 28,
       "points_possible": 30,
       "graded_at": "2026-10-11"
+    },
+    "demo-music-grade-5": {
+      "course_id": "manual-demo-course-1",
+      "name": "Note Reading Check",
+      "score": 17,
+      "points_possible": 20,
+      "graded_at": "2026-09-13"
+    },
+    "demo-music-grade-6": {
+      "course_id": "manual-demo-course-1",
+      "name": "Instrument Families Quiz",
+      "score": 18,
+      "points_possible": 20,
+      "graded_at": "2026-09-17"
+    },
+    "demo-music-grade-7": {
+      "course_id": "manual-demo-course-1",
+      "name": "Melody Exercise",
+      "score": 16,
+      "points_possible": 20,
+      "graded_at": "2026-09-30"
+    },
+    "demo-music-grade-8": {
+      "course_id": "manual-demo-course-1",
+      "name": "Performance Reflection",
+      "score": 19,
+      "points_possible": 20,
+      "graded_at": "2026-10-07"
+    },
+    "demo-science-grade-1": {
+      "course_id": 103,
+      "name": "Ecosystem Vocabulary",
+      "score": 20,
+      "points_possible": 25,
+      "graded_at": "2026-09-09"
+    },
+    "demo-science-grade-2": {
+      "course_id": 103,
+      "name": "Food Web Diagram",
+      "score": 22,
+      "points_possible": 25,
+      "graded_at": "2026-09-14"
+    },
+    "demo-science-grade-3": {
+      "course_id": 103,
+      "name": "Energy Flow Notes",
+      "score": 21,
+      "points_possible": 25,
+      "graded_at": "2026-09-19"
+    },
+    "demo-science-grade-4": {
+      "course_id": 103,
+      "name": "Habitat Investigation",
+      "score": 23,
+      "points_possible": 25,
+      "graded_at": "2026-09-24"
+    },
+    "demo-science-grade-5": {
+      "course_id": 103,
+      "name": "Population Graph",
+      "score": 19,
+      "points_possible": 25,
+      "graded_at": "2026-09-29"
+    },
+    "demo-science-grade-6": {
+      "course_id": 103,
+      "name": "Lab Safety Check",
+      "score": 21.5,
+      "points_possible": 25,
+      "graded_at": "2026-10-05"
+    },
+    "demo-science-grade-7": {
+      "course_id": 103,
+      "name": "Evidence Reflection",
+      "score": 20.5,
+      "points_possible": 25,
+      "graded_at": "2026-10-10"
     }
   }
 }
