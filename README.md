@@ -88,182 +88,62 @@ tracked outside Canvas.
 
 ## Features
 
-### ⚠️ Missing Assignments
+EmberGuide is organized around the questions students and families ask every
+day: What needs attention, what is coming next, and how is each class going?
 
-Missing work is displayed prominently at the top of the dashboard so it is difficult to overlook.
+### 🎯 A clear next step
 
-### ✅ Canvas To-do List
+**What to Do Next** turns missing and upcoming work into a short,
+urgency-ordered action list. Missing assignments remain prominent, while direct
+Canvas links make it easy to move from planning to doing.
 
-Shows the student's incomplete Canvas planner notes. To-dos can be created, edited, and marked complete from the dashboard, with each change saved back to Canvas.
+### ✅ To-dos and a predictable week
 
-### 📅 Upcoming Assignments
+Create, edit, and complete Canvas planner notes without leaving the dashboard.
+The seven-day view groups coursework by date and shows each class, due time,
+and submission status, including work from classes tracked outside Canvas.
 
-Shows assignments due during the next seven days, including:
+### 📈 Encouraging grade context
 
-* Assignment name
-* Course
-* Due date and time
-* Submission status
-* Grade, when available
+A compact snapshot shows every current course average, while locally rendered
+Chart.js trends rebuild the cumulative grade after each assignment on a shared
+A–F scale. Open any class to connect the overall letter grade to recent scores,
+points possible, and dates.
 
-Assignments link back to Canvas when Canvas provides an assignment URL.
+Local grade tools can correct stale Canvas values, add grades from another
+system, or temporarily hide an inaccurate assignment until Canvas updates. All
+changes stay inside EmberGuide and never modify the Canvas gradebook.
 
-### ✍️ Manual Classes and Assignments
+> **Grade estimates:** EmberGuide calculates percentages from assignments
+> available through the API. Weighted groups, grading periods, dropped work,
+> and other teacher gradebook rules can make the official Canvas grade differ.
 
-Use **Classes** in Settings to add classes that are not available in Canvas. Use
-**Assignment Grades** to create assignments with due dates and times and mark
-them complete.
+### 🧩 One place for every class
 
-Incomplete future assignments appear in **This Week** and incomplete overdue
-assignments appear in **Missing Assignments**. Manual coursework is stored in
-`/data/manual_coursework.json` for the Home Assistant add-on or
-`tmp/manual_coursework.json` locally, so Canvas refreshes do not overwrite it.
+Add manual classes and assignments for coursework outside Canvas. Long Canvas
+course names can be shortened, and irrelevant enrollments can be hidden
+locally, without changing the student's actual Canvas enrollment.
 
-### 📊 Grade Summary
+### ✉️ Family-friendly digests and backups
 
-Calculates a current grade for each course from graded assignments returned by the Canvas API.
+Preview, send on demand, or schedule a responsive morning digest containing the
+current grade snapshot, missing work, near-term assignments, schedule changes,
+and recently posted grades. Download or email a checksum-verified ZIP backup of
+cached and locally managed data without including Canvas or Gmail credentials.
 
-The dashboard also shows recent individual assignment grades and encouraging
-per-course Chart.js trend cards. Each card highlights the current grade and
-reconstructs the cumulative percentage after every dated assignment in the
-current Canvas data on a fixed A–F scale. Chart.js is bundled with the
-dashboard, so rendering does not depend on an external CDN.
+### 🏠 Designed for an always-on family dashboard
 
-> **Note:** These percentages are calculated from the assignments available through the API and may not exactly match the official Canvas course grade, particularly when a teacher uses weighted assignment groups, grading periods, dropped assignments, or other gradebook rules.
+EmberGuide refreshes Canvas every ten minutes, caches the last successful
+response for outages, and includes responsive/PWA metadata for phones and iPad
+Home Screens. It runs locally or as a Home Assistant app on an always-on device
+such as a Raspberry Pi.
 
-Use **Edit Assignment Grades** to correct stale Canvas scores or add assignments that only appear in Infinite Campus. Existing Canvas assignments accept optional earned-point and possible-point overrides; leaving both blank uses Canvas values. Infinite Campus-only assignments include a course, name, earned points, possible points, and date. Course percentages are recalculated from the combined assignment list.
+### 🔔 Home Assistant awareness
 
-Use **Edit this class** on an individual grade card to open an editor containing only that class's assignments. The class chips at the top of the editor switch between classes, and **All Classes** opens the complete grade editor. Saving one class does not change grade edits belonging to another class.
-
-Edits are stored in `/data/grade_overrides.json` for the Home Assistant add-on or `tmp/grade_overrides.json` locally. Values stay local to the dashboard and are not sent to Canvas or Infinite Campus.
-
-When an overridden Canvas assignment receives a changed score, possible-points value, or grading timestamp from Canvas, the dashboard automatically removes that override on the next successful refresh. Infinite Campus-only assignments are retained because they have no corresponding Canvas assignment to update.
-
-For an incorrect or premature Canvas grade, select **Hide until Canvas updates** beside the assignment in the grade editor and save. The assignment is hidden from the dashboard's grade list, missing work, upcoming assignments, and daily digest, and neither its earned nor possible points count toward calculated course grades. It remains visible in the grade editor, marked **Hidden**, so you can uncheck it to restore it manually. Hidden status persists across restarts and unchanged refreshes. When Canvas changes the assignment's score, possible points, or grading timestamp, the next successful refresh clears its hidden status and any local grade edits, restores the assignment, and includes the latest Canvas grade in calculations. This does not change anything in Canvas.
-
-Infinite Campus offers stable automated grade access through district-managed OneRoster exports and APIs, not ordinary parent or student portal credentials. Unofficial portal clients exist but depend on reverse-engineered endpoints and stored login credentials, so the dashboard uses explicit local grades rather than an unreliable credential-based sync.
-
-### 💾 Local Cache
-
-Successful Canvas responses are cached locally.
-
-If Canvas is temporarily unavailable, the dashboard can continue displaying the last successfully retrieved data instead of becoming unusable.
-
-### ✉️ Scheduled Emails
-
-The **Scheduled Emails** page supports separate recipient lists and schedules for data backups and a daily school digest. Multiple addresses can be entered on separate lines or separated by commas; each recipient receives an individual email.
-
-#### Data backups
-
-Generate an in-memory ZIP containing the Canvas cache and all locally managed dashboard data. Use **Download Backup** to save it directly without email, optionally enable email delivery every day at 3:00 AM local time, or use **Email Backup Now**.
-
-Each message has the subject `EmberGuide Backup for {Current Date}` and contains only the ZIP attachment. The archive is discarded after Gmail accepts the message; no backup ZIP is retained on the system.
-
-The archive includes the Canvas cache, manual coursework, grade overrides and custom grades, class-name mappings, hidden classes, event history, backup recipient, a manifest, and checksums. It never includes `/data/options.json`, the Canvas token, or Gmail credentials.
-
-To enable email delivery:
-
-1. Enable 2-Step Verification on the sending Google account.
-2. Create a Google app password for the dashboard.
-3. In the Home Assistant EmberGuide app configuration, set `gmail_sender` to that Google account's email address and `gmail_app_password` to the generated app password.
-4. Restart the app, open **Scheduled Emails**, and configure the backup and digest recipients.
-
-#### Daily digest
-
-The responsive HTML daily digest prominently displays the complete current grade snapshot, followed by all missing work, assignments due today, assignments due tomorrow, and grades posted during the previous seven days sorted newest-first. It can be previewed in the browser without sending an email, sent automatically at 6:00 AM local time, or sent on demand with **Send Daily Digest Now**.
-
-The Gmail fields are optional. The dashboard continues working normally when they are blank, but scheduled email delivery remains disabled.
-
-### 🔄 Automatic Refresh
-
-Canvas data is refreshed automatically every 10 minutes.
-
-The browser page also periodically reloads so newly fetched information appears without requiring the user to manually refresh the page.
-
-### 🔑 Token Expiration
-
-The dashboard can display the number of days remaining before the configured Canvas access token expires.
-
-### 📱 iPad / Mobile Support
-
-The interface is responsive and includes PWA/mobile metadata so it can be added to an iPad Home Screen for quick access.
-
-### Course Name Mappings
-
-Use **Edit Class Names** at the bottom of the dashboard to replace long Canvas course names with shorter labels or hide Canvas classes that are not needed. Hidden classes are removed locally from dashboard assignments, missing work, grades, to-dos, summaries, and course selectors without changing the Canvas enrollment. Return to **Edit Class Names** and clear **Hide from dashboard** to restore one.
-
-Aliases are stored by Canvas course ID in `/data/course_name_mappings.json` for the Home Assistant add-on or `tmp/course_name_mappings.json` locally. Hidden course IDs are stored in `/data/hidden_courses.json` or `tmp/hidden_courses.json`. These files are excluded from source control.
-
-### Home Assistant Events
-
-The dashboard compares consecutive successful Canvas refreshes and keeps the latest 500 changes in `/data/event_journal.json`. The first refresh establishes a baseline and does not create events.
-
-When installed as a Home Assistant app, every change is also fired on Home Assistant's event bus as `emberguide_activity`. No REST sensor or YAML configuration is required. In **Settings → Automations & scenes**, create an automation with an **Event** trigger, enter `emberguide_activity` as the event type, and add a phone notification action.
-
-Available event types are:
-
-* `assignment_missing`
-* `assignment_no_longer_missing`
-* `assignment_submitted`
-* `grade_posted`
-* `grade_changed`
-* `due_date_changed`
-* `teacher_feedback_added`
-
-Event data is available to automation templates under `trigger.event.data`. For example:
-
-```jinja
-{{ trigger.event.data.assignment_name }}
-in {{ trigger.event.data.course_name }}
-```
-
-To filter an automation to one kind of activity, add this template condition and replace `grade_posted` with the desired event type:
-
-```jinja
-{{ trigger.event.data.type == 'grade_posted' }}
-```
-
-The REST API remains available for external integrations. `GET /api/status` returns dashboard counts and the latest event. `GET /api/events?after=42&limit=100` returns events after a known event ID.
-
-A REST sensor can use the latest event ID as its state when the dashboard runs outside Home Assistant:
-
-```yaml
-rest:
-  - resource: http://HOME_ASSISTANT_HOST:4567/api/status
-    scan_interval: 60
-    sensor:
-      - name: EmberGuide Event
-        value_template: "{{ value_json.latest_event_id }}"
-        json_attributes:
-          - latest_event
-          - missing_count
-          - due_today_count
-          - due_tomorrow_count
-          - canvas_available
-```
-
-Replace `HOME_ASSISTANT_HOST` with the hostname or IP address that exposes the add-on port. `localhost` is only correct when Home Assistant and this process share a network namespace.
-
-Example automation trigger:
-
-```yaml
-automation:
-  - alias: School grade posted
-    triggers:
-      - trigger: state
-        entity_id: sensor.emberguide_event
-    conditions:
-      - condition: template
-        value_template: >-
-          {{ trigger.to_state.attributes.get('latest_event', {}).get('type') == 'grade_posted' }}
-    actions:
-      - action: notify.mobile_app_parent_phone
-        data:
-          title: New Canvas grade
-          message: >-
-            {{ trigger.to_state.attributes.latest_event.assignment_name }}:
-            {{ trigger.to_state.attributes.latest_event.score }} points
-```
+Successful refreshes produce structured activity for missing work,
+submissions, grades, due-date changes, and teacher feedback. Home Assistant can
+turn those events into household notifications and automations, while status
+and event APIs support other local integrations.
 
 ---
 
@@ -356,6 +236,29 @@ Refreshing Canvas data...
 Canvas cache saved.
 Canvas refresh successful at ...
 ```
+
+---
+
+## Activity Events and API
+
+When installed in Home Assistant, EmberGuide fires each detected Canvas change
+on the event bus as `emberguide_activity`. Create an automation with an **Event**
+trigger using that event type; payload fields are available under
+`trigger.event.data`.
+
+Detected activity types include:
+
+* `assignment_missing`
+* `assignment_no_longer_missing`
+* `assignment_submitted`
+* `grade_posted`
+* `grade_changed`
+* `due_date_changed`
+* `teacher_feedback_added`
+
+For other local integrations, `GET /api/status` returns dashboard counts and the
+latest event, while `GET /api/events?after=42&limit=100` returns events after a
+known event ID. EmberGuide retains the latest 500 changes locally.
 
 ---
 
@@ -495,6 +398,19 @@ GMAIL_APP_PASSWORD
 ```
 
 `run-local.sh` loads these values from `.env`.
+
+---
+
+### Scheduled Email Delivery
+
+Gmail delivery is optional. Set `gmail_sender` and `gmail_app_password`, restart
+EmberGuide, then configure recipients and schedules under **Scheduled Emails**.
+Use a Google app password rather than the account's normal password.
+
+The daily digest can be previewed without sending, delivered on demand, or
+scheduled for 6:00 AM local time. Backups can be downloaded directly, emailed
+on demand, or scheduled for 3:00 AM. Backup archives never include
+`/data/options.json`, Canvas tokens, or Gmail credentials.
 
 ---
 
