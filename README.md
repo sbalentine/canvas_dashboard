@@ -23,6 +23,18 @@ It was designed to run continuously as a **Home Assistant add-on on a Raspberry 
 
 ---
 
+## Why?
+
+Canvas contains a lot of information, but checking several courses to answer a simple question like:
+
+> "What homework do I still need to do?"
+
+can require a surprising amount of navigation.
+
+This dashboard uses the Canvas API to collect that information and present it on a single page designed to be left open, bookmarked, or added to an iPad Home Screen.
+
+---
+
 ## Product tour
 
 ### See the whole school day at a glance
@@ -71,45 +83,6 @@ tracked outside Canvas.
 > **Demo data:** Every grade, assignment, date, and score shown above is
 > illustrative data created for the EmberGuide demo. The displayed profile does
 > not contain a real student's academic record.
-
----
-
-## Demo mode
-
-EmberGuide includes a committed anonymized dataset so anyone can take
-screenshots or give a local demo without connecting to Canvas:
-
-```sh
-ruby emberguide/app.rb --demo
-```
-
-The bundled data uses synthetic student, class, assignment, ID, and URL values
-while retaining representative grade and scheduling patterns. Its classes span
-A, B, and C averages so grade states and trend cards are easy to demonstrate.
-Dates shift relative to the current day each time the app starts. All writable
-settings are isolated under `emberguide/tmp/demo`, and Canvas refreshes and
-scheduled email delivery are disabled.
-
-Maintainers can rebuild the committed dataset from an existing local cache
-after the dashboard data shape changes:
-
-```sh
-ruby script/create_demo_data.rb
-```
-
-Review the generated files in `emberguide/demo` before committing them.
-
----
-
-## Why?
-
-Canvas contains a lot of information, but checking several courses to answer a simple question like:
-
-> "What homework do I still need to do?"
-
-can require a surprising amount of navigation.
-
-This dashboard uses the Canvas API to collect that information and present it on a single page designed to be left open, bookmarked, or added to an iPad Home Screen.
 
 ---
 
@@ -294,47 +267,95 @@ automation:
 
 ---
 
-## Project Structure
+# Home Assistant Installation
+
+The dashboard can run continuously as a Home Assistant app installed directly from GitHub.
+
+This is particularly useful when Home Assistant OS is running on an always-on Raspberry Pi.
+
+## Add the Repository
+
+1. In Home Assistant, open **Settings → Apps → Install app**.
+2. Open the three-dot menu and select **Repositories**.
+3. Add this repository URL:
 
 ```text
-emberguide/
-├── repository.yaml
-├── run-local.sh
-├── test/
-└── emberguide/
-  ├── app.rb
-  ├── Dockerfile
-  ├── config.yaml
-  ├── run.sh
-  ├── lib/
-  ├── views/
-  ├── public/
-  └── tmp/                # Local only; ignored by Git
+https://github.com/sbalentine/emberguide
 ```
 
-### `emberguide/app.rb`
+4. Refresh the app store and select **EmberGuide**.
+5. Install the app and enter the Canvas configuration below.
 
-Starts the WEBrick web server and defines the dashboard, stylesheet, icon, and PWA manifest routes.
+---
 
-### `emberguide/lib/canvas.rb`
+## Home Assistant Configuration
 
-Handles Canvas configuration, authentication, API requests, and token expiration.
+The included `config.yaml` defines the add-on and exposes the dashboard web server.
 
-### `emberguide/lib/dashboard_data.rb`
+Example:
 
-Retrieves Canvas data, builds the dashboard data model, caches successful responses, and manages the background refresh process.
+```yaml
+name: "EmberGuide"
+description: "A clear, family-friendly guide to Canvas coursework"
+version: "0.20.1"
+url: "https://github.com/sbalentine/emberguide"
+slug: "canvas_dashboard"
+init: false
 
-### `emberguide/lib/helpers.rb`
+arch:
+  - aarch64
 
-Contains presentation and assignment helpers such as date formatting, score formatting, course names, and submission status.
+ports:
+  4567/tcp: 4567
 
-### `emberguide/views/dashboard.erb`
+ports_description:
+  4567/tcp: "EmberGuide"
 
-The HTML/ERB dashboard interface.
+map:
+  - addon_config:rw
 
-### `emberguide/public/dashboard.css`
+options:
+  canvas_url: ""
+  canvas_token: ""
+  token_expires: ""
+  gmail_sender: ""
+  gmail_app_password: ""
 
-Dashboard styling and responsive layout.
+schema:
+  canvas_url: str
+  canvas_token: password
+  token_expires: str
+  gmail_sender: str
+  gmail_app_password: password
+```
+
+Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The Gmail sender and app password are optional and only required for scheduled emails.
+
+The token is provided to the application through Home Assistant's `/data/options.json` and does **not** need to be stored in the Git repository.
+
+---
+
+## Building the Add-on
+
+After placing or updating the files:
+
+1. Open **Home Assistant**
+2. Go to **Settings → Apps**
+3. Open the local **EmberGuide** add-on
+4. Rebuild/update the add-on
+5. Start it
+6. Check the add-on logs
+
+A successful startup should look similar to:
+
+```text
+Starting EmberGuide...
+Loading cached Canvas data...
+EmberGuide listening on port 4567
+Refreshing Canvas data...
+Canvas cache saved.
+Canvas refresh successful at ...
+```
 
 ---
 
@@ -434,98 +455,6 @@ emberguide/tmp/canvas_cache.json
 ```
 
 The `tmp` directory is ignored by Git.
-
----
-
-# Home Assistant Installation
-
-The dashboard can run continuously as a Home Assistant app installed directly from GitHub.
-
-This is particularly useful when Home Assistant OS is running on an always-on Raspberry Pi.
-
-## Add the Repository
-
-1. In Home Assistant, open **Settings → Apps → Install app**.
-2. Open the three-dot menu and select **Repositories**.
-3. Add this repository URL:
-
-```text
-https://github.com/sbalentine/emberguide
-```
-
-4. Refresh the app store and select **EmberGuide**.
-5. Install the app and enter the Canvas configuration below.
-
----
-
-## Home Assistant Configuration
-
-The included `config.yaml` defines the add-on and exposes the dashboard web server.
-
-Example:
-
-```yaml
-name: "EmberGuide"
-description: "A clear, family-friendly guide to Canvas coursework"
-version: "0.20.1"
-url: "https://github.com/sbalentine/emberguide"
-slug: "canvas_dashboard"
-init: false
-
-arch:
-  - aarch64
-
-ports:
-  4567/tcp: 4567
-
-ports_description:
-  4567/tcp: "EmberGuide"
-
-map:
-  - addon_config:rw
-
-options:
-  canvas_url: ""
-  canvas_token: ""
-  token_expires: ""
-  gmail_sender: ""
-  gmail_app_password: ""
-
-schema:
-  canvas_url: str
-  canvas_token: password
-  token_expires: str
-  gmail_sender: str
-  gmail_app_password: password
-```
-
-Configure the Canvas URL, token, and expiration date through the Home Assistant add-on configuration. The Gmail sender and app password are optional and only required for scheduled emails.
-
-The token is provided to the application through Home Assistant's `/data/options.json` and does **not** need to be stored in the Git repository.
-
----
-
-## Building the Add-on
-
-After placing or updating the files:
-
-1. Open **Home Assistant**
-2. Go to **Settings → Apps**
-3. Open the local **EmberGuide** add-on
-4. Rebuild/update the add-on
-5. Start it
-6. Check the add-on logs
-
-A successful startup should look similar to:
-
-```text
-Starting EmberGuide...
-Loading cached Canvas data...
-EmberGuide listening on port 4567
-Refreshing Canvas data...
-Canvas cache saved.
-Canvas refresh successful at ...
-```
 
 ---
 
@@ -657,6 +586,71 @@ git push
 ```
 
 Once the changes are working locally, increase the version in `emberguide/config.yaml` and push the changes. Home Assistant will then offer the new version as an update.
+
+## Demo mode
+
+EmberGuide includes a committed anonymized dataset for screenshots, product
+evaluation, and local development without a Canvas connection:
+
+```sh
+ruby emberguide/app.rb --demo
+```
+
+The bundled data uses synthetic classes, assignments, IDs, URLs, and academic
+records. Dates shift relative to the current day each time the app starts. All
+writable settings are isolated under `emberguide/tmp/demo`, and Canvas
+refreshes and scheduled email delivery are disabled.
+
+Rebuild the bundled dataset from an existing local cache after the dashboard
+data shape changes:
+
+```sh
+ruby script/create_demo_data.rb
+```
+
+Review the generated files in `emberguide/demo` before committing them.
+
+## Project Structure
+
+```text
+emberguide/
+├── repository.yaml
+├── run-local.sh
+├── test/
+└── emberguide/
+  ├── app.rb
+  ├── Dockerfile
+  ├── config.yaml
+  ├── run.sh
+  ├── lib/
+  ├── views/
+  ├── public/
+  └── tmp/                # Local only; ignored by Git
+```
+
+### `emberguide/app.rb`
+
+Starts the WEBrick web server and defines the dashboard, stylesheet, icon, and PWA manifest routes.
+
+### `emberguide/lib/canvas.rb`
+
+Handles Canvas configuration, authentication, API requests, and token expiration.
+
+### `emberguide/lib/dashboard_data.rb`
+
+Retrieves Canvas data, builds the dashboard data model, caches successful responses, and manages the background refresh process.
+
+### `emberguide/lib/helpers.rb`
+
+Contains presentation and assignment helpers such as date formatting, score formatting, course names, and submission status.
+
+### `emberguide/views/dashboard.erb`
+
+The HTML/ERB dashboard interface.
+
+### `emberguide/public/dashboard.css`
+
+Dashboard styling and responsive layout.
 
 ---
 
