@@ -962,6 +962,21 @@ server.mount_proc "/chart.umd.min.js" do |_request, response|
 end
 
 # ============================================================
+# Navigation JavaScript
+# ============================================================
+
+server.mount_proc "/navigation.js" do |_request, response|
+  response.status = 200
+  response["Content-Type"] = "text/javascript; charset=utf-8"
+  response["Cache-Control"] = "public, max-age=86400"
+
+  response.body =
+    File.read(
+      File.join(APP_ROOT, "public", "navigation.js")
+    )
+end
+
+# ============================================================
 # App Icon
 # ============================================================
 

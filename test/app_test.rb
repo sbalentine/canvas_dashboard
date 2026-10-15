@@ -134,7 +134,10 @@ class AppTest < Minitest::Test
     assert_includes html, "<strong>NextStep</strong>"
     assert_includes html, 'class="dashboard-nav-toggle"'
     assert_includes html, 'aria-controls="dashboard-nav-links"'
-    assert_includes html, 'class="is-active" href="/">Dashboard</a>'
+    assert_match(
+      /class="is-active" href="\/">\s*Dashboard\s*<\/a>/,
+      html
+    )
     assert_includes html, 'class="dashboard-section-title"'
     refute_match(/<h2[^>]*>\s*[🗓️⚠️✅📅📊]/, html)
     refute_includes html, "0 assignments"

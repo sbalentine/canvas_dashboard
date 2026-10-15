@@ -187,44 +187,10 @@
       next_schedule_change = schedule_changes.first
     %>
 
-    <nav class="dashboard-nav" aria-label="Main navigation">
-      <a class="dashboard-brand" href="/">
-        <span class="dashboard-brand-mark" aria-hidden="true">
-          <span></span>
-          <span></span>
-        </span>
-        <strong>NextStep</strong>
-      </a>
-
-      <button
-        class="dashboard-nav-toggle"
-        type="button"
-        aria-expanded="false"
-        aria-controls="dashboard-nav-links"
-        aria-label="Open navigation menu"
-      >
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
-
-      <div class="dashboard-nav-links" id="dashboard-nav-links">
-        <a class="is-active" href="/">Dashboard</a>
-        <a href="/calendar">Calendar</a>
-        <a href="/grades">Grades</a>
-        <a href="/settings">Settings</a>
-      </div>
-
-      <div class="dashboard-profile">
-        <span aria-hidden="true">
-          <%= h profile_first_name(data)[0]&.upcase %>
-        </span>
-        <div>
-          <strong><%= h profile_first_name(data) %></strong>
-          <small>Student dashboard</small>
-        </div>
-      </div>
-    </nav>
+    <%
+      navigation_active = "dashboard"
+    %>
+    <%= render_partial("navigation", binding) %>
 
     <!-- =====================================================
          Header
@@ -1210,40 +1176,6 @@
 
   <script src="/chart.umd.min.js?v=4.5.1"></script>
   <script>
-    const dashboardNav = document.querySelector(".dashboard-nav");
-    const dashboardNavToggle = document.querySelector(".dashboard-nav-toggle");
-
-    if (dashboardNav && dashboardNavToggle) {
-      const closeNavigation = () => {
-        dashboardNav.classList.remove("is-open");
-        dashboardNavToggle.setAttribute("aria-expanded", "false");
-        dashboardNavToggle.setAttribute("aria-label", "Open navigation menu");
-      };
-
-      dashboardNavToggle.addEventListener("click", () => {
-        const isOpen = dashboardNav.classList.toggle("is-open");
-
-        dashboardNavToggle.setAttribute("aria-expanded", isOpen.toString());
-        dashboardNavToggle.setAttribute(
-          "aria-label",
-          isOpen ? "Close navigation menu" : "Open navigation menu"
-        );
-      });
-
-      document.addEventListener("keydown", (event) => {
-        if (event.key !== "Escape" || !dashboardNav.classList.contains("is-open")) {
-          return;
-        }
-
-        closeNavigation();
-        dashboardNavToggle.focus();
-      });
-
-      window.addEventListener("resize", () => {
-        if (window.innerWidth > 700) closeNavigation();
-      });
-    }
-
     const trendDataElement = document.getElementById("grade-trend-data");
 
     if (trendDataElement) {

@@ -78,6 +78,18 @@ def json_for_html_script(value)
     .gsub(">", "\\u003e")
 end
 
+def render_partial(name, view_binding)
+  path = File.join(APP_ROOT, "views", "_#{name}.erb")
+  ERB.new(
+    File.read(path),
+    eoutvar: "_partial_output"
+  ).result(view_binding)
+end
+
+def navigation_profile_name
+  profile_first_name(dashboard_data_with_manual || {})
+end
+
 def course_symbol(name)
   case name.to_s.downcase
   when /science|biology|chemistry|physics/

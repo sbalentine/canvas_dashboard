@@ -1,0 +1,52 @@
+<nav class="dashboard-nav" aria-label="Main navigation">
+  <a class="dashboard-brand" href="/">
+    <span class="dashboard-brand-mark" aria-hidden="true">
+      <span></span>
+      <span></span>
+    </span>
+    <strong>NextStep</strong>
+  </a>
+
+  <button
+    class="dashboard-nav-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="dashboard-nav-links"
+    aria-label="Open navigation menu"
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+  <div class="dashboard-nav-links" id="dashboard-nav-links">
+    <a class="<%= "is-active" if navigation_active == "dashboard" %>" href="/">
+      Dashboard
+    </a>
+    <a class="<%= "is-active" if navigation_active == "calendar" %>" href="/calendar">
+      Calendar
+    </a>
+    <a class="<%= "is-active" if navigation_active == "grades" %>" href="/grades">
+      Grades
+    </a>
+    <a class="<%= "is-active" if navigation_active == "settings" %>" href="/settings">
+      Settings
+    </a>
+  </div>
+
+  <%
+    profile_name = navigation_profile_name
+  %>
+  <div class="dashboard-profile">
+    <span aria-hidden="true"><%= h profile_name[0]&.upcase %></span>
+    <div>
+      <strong><%= h profile_name %></strong>
+      <small>Student dashboard</small>
+    </div>
+  </div>
+</nav>
+
+<script
+  src="/navigation.js?v=<%= File.mtime(File.join(APP_ROOT, "public", "navigation.js")).to_i %>"
+  defer
+></script>

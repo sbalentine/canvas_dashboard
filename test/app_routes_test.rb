@@ -63,6 +63,7 @@ class AppRoutesTest < Minitest::Test
     dashboard = request("/")
     stylesheet = request("/dashboard.css")
     chart = request("/chart.umd.min.js")
+    navigation = request("/navigation.js")
     manifest = request("/manifest.json")
     class_names = request("/class-names")
     grades = request("/grades")
@@ -74,9 +75,13 @@ class AppRoutesTest < Minitest::Test
 
     assert_equal "200", dashboard.code
     assert_includes dashboard.body, "Good"
+    assert_includes dashboard.body, "<title>School Dashboard</title>"
+    assert_includes dashboard.body, 'rel="stylesheet"'
     assert_equal "text/css; charset=utf-8", stylesheet["Content-Type"]
     assert_equal "text/javascript; charset=utf-8", chart["Content-Type"]
     assert_includes chart.body, "Chart.js v4.5.1"
+    assert_equal "text/javascript; charset=utf-8", navigation["Content-Type"]
+    assert_includes navigation.body, "dashboard-nav-toggle"
     assert_equal "School Dashboard", JSON.parse(manifest.body)["name"]
     assert_equal "200", class_names.code
     assert_includes class_names.body, "Class Names"
@@ -87,10 +92,16 @@ class AppRoutesTest < Minitest::Test
     assert_includes scheduled_emails.body, "Preview Daily Digest"
     assert_includes scheduled_emails.body, "Download Backup"
     assert_equal "200", settings.code
+    assert_includes settings.body, "<title>Settings</title>"
+    assert_includes settings.body, 'rel="stylesheet"'
     assert_includes settings.body, "District Calendar"
     assert_includes settings.body, "Scheduled Emails"
+    assert_includes settings.body, 'class="is-active" href="/settings"'
     assert_equal "200", calendar.code
+    assert_includes calendar.body, "<title>School Calendar</title>"
+    assert_includes calendar.body, 'rel="stylesheet"'
     assert_includes calendar.body, "School Calendar"
+    assert_includes calendar.body, 'class="is-active" href="/calendar"'
     assert_equal "200", digest_preview.code
     assert_equal "text/html; charset=utf-8", digest_preview["Content-Type"]
     assert_equal "no-store", digest_preview["Cache-Control"]

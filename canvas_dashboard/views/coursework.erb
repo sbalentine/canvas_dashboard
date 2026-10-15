@@ -6,7 +6,7 @@
     name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
-  <meta name="theme-color" content="#5b67d6">
+  <meta name="theme-color" content="#080711">
   <link
     rel="stylesheet"
     href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
@@ -16,6 +16,11 @@
 
 <body>
   <main class="container settings-page coursework-settings-page">
+    <%
+      navigation_active = "settings"
+    %>
+    <%= render_partial("navigation", binding) %>
+
     <header class="settings-header">
       <div>
         <h1>Manual Classes &amp; Assignments</h1>
@@ -24,7 +29,6 @@
         </div>
       </div>
 
-      <a href="/">Back to Dashboard</a>
     </header>
 
     <section class="card coursework-settings-section">
