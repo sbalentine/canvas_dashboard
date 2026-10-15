@@ -4,6 +4,21 @@ require "json"
 require "securerandom"
 
 APP_ROOT = File.expand_path(__dir__)
+DEMO_MODE = ARGV.delete("--demo")
+
+if DEMO_MODE
+  require_relative "lib/demo_data"
+
+  DemoData.prepare_runtime!(APP_ROOT).each do |name, value|
+    ENV[name] = value
+  end
+
+  ENV["CANVAS_URL"] = "https://canvas.example.test"
+  ENV["CANVAS_TOKEN"] = "demo-token"
+  ENV["TOKEN_EXPIRES"] = (Date.today + 365).iso8601
+  ENV["GMAIL_SENDER"] = ""
+  ENV["GMAIL_APP_PASSWORD"] = ""
+end
 
 require_relative "lib/canvas"
 require_relative "lib/helpers"
@@ -22,12 +37,14 @@ require_relative "lib/school_calendar"
 # ============================================================
 
 if $PROGRAM_NAME == __FILE__
-  puts "Starting EmberGuide..."
+  puts "Starting EmberGuide#{DEMO_MODE ? " in demo mode" : ""}..."
 
   initialize_dashboard_data
   initialize_event_journal
-  start_refresh_thread
-  start_scheduled_email_thread
+  unless DEMO_MODE
+    start_refresh_thread
+    start_scheduled_email_thread
+  end
 end
 
 # ============================================================
@@ -127,7 +144,11 @@ server.mount_proc "/refresh" do |request, response|
     next
   end
 
-  refresh_dashboard
+  if DEMO_MODE
+    initialize_dashboard_data
+  else
+    refresh_dashboard
+  end
 
   response.status = 303
   response["Location"] = "/"

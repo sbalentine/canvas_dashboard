@@ -46,6 +46,33 @@ It was designed to run continuously as a **Home Assistant add-on on a Raspberry 
 
 ---
 
+## Demo mode
+
+EmberGuide includes a committed anonymized dataset so anyone can take
+screenshots or give a local demo without connecting to Canvas:
+
+```sh
+ruby emberguide/app.rb --demo
+```
+
+The bundled data uses synthetic student, class, assignment, ID, and URL values
+while retaining representative grade and scheduling patterns. Its classes span
+A, B, and C averages so grade states and trend cards are easy to demonstrate.
+Dates shift relative to the current day each time the app starts. All writable
+settings are isolated under `emberguide/tmp/demo`, and Canvas refreshes and
+scheduled email delivery are disabled.
+
+Maintainers can rebuild the committed dataset from an existing local cache
+after the dashboard data shape changes:
+
+```sh
+ruby script/create_demo_data.rb
+```
+
+Review the generated files in `emberguide/demo` before committing them.
+
+---
+
 ## Why?
 
 Canvas contains a lot of information, but checking several courses to answer a simple question like:

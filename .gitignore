@@ -2,6 +2,7 @@
 data/
 options.json
 canvas_cache.json
+!emberguide/demo/canvas_cache.json
 
 # Local runtime data
 tmp/

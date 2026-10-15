@@ -1,0 +1,12 @@
+{
+  "canvas": {},
+  "custom": {
+    "demo-grade-2": {
+      "course_id": 103,
+      "name": "Progress Check 2",
+      "score": 55.25,
+      "points_possible": 65.0,
+      "graded_at": "2026-10-02"
+    }
+  }
+}
