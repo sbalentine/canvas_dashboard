@@ -570,6 +570,14 @@ Dashboard styling and responsive layout.
 
 ---
 
+# License
+
+EmberGuide is available under the [MIT License](LICENSE). You may use, modify,
+and distribute it, subject to the license terms. The software is provided
+without warranty.
+
+---
+
 # Disclaimer
 
 This is an independent personal project using the Canvas LMS API.
