@@ -79,7 +79,7 @@ COURSE_GRADE_TARGETS = {
   "Science" => 84,
   "Social Studies" => 90,
   "Art" => 94,
-  "Physical Education" => 92
+  "Physical Education" => 90
 }.freeze
 
 def read_json(file_name, default)

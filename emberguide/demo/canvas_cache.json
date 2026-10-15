@@ -64,7 +64,7 @@
     {
       "id": 1004,
       "assignment_id": 1003,
-      "score": 11.85,
+      "score": 11.59,
       "grade": "9.5",
       "graded_at": "2026-10-14T19:03:54Z",
       "workflow_state": "graded",
@@ -199,7 +199,7 @@
     {
       "id": 1016,
       "assignment_id": 1015,
-      "score": 12.48,
+      "score": 12.21,
       "grade": "10",
       "graded_at": "2026-10-07T19:34:21Z",
       "workflow_state": "graded",
@@ -220,7 +220,7 @@
     {
       "id": 1018,
       "assignment_id": 1017,
-      "score": 7.49,
+      "score": 7.32,
       "grade": "6",
       "graded_at": "2026-10-07T19:34:11Z",
       "workflow_state": "graded",
@@ -265,7 +265,7 @@
     {
       "id": 1022,
       "assignment_id": 1021,
-      "score": 61.13,
+      "score": 59.81,
       "grade": "49",
       "graded_at": "2026-10-06T21:19:54Z",
       "submitted_at": "2026-10-02T19:55:06Z",
@@ -585,7 +585,7 @@
     {
       "id": 1050,
       "assignment_id": 1049,
-      "score": 16.22,
+      "score": 15.87,
       "grade": "13",
       "graded_at": "2026-09-22T22:07:30Z",
       "workflow_state": "graded",
@@ -607,7 +607,7 @@
     {
       "id": 1052,
       "assignment_id": 1051,
-      "score": 3.12,
+      "score": 3.05,
       "grade": "2.5",
       "graded_at": "2026-09-22T21:26:00Z",
       "workflow_state": "graded",
@@ -651,7 +651,7 @@
     {
       "id": 1056,
       "assignment_id": 1055,
-      "score": 24.95,
+      "score": 24.41,
       "grade": "20",
       "graded_at": "2026-09-17T21:23:31Z",
       "submitted_at": "2026-09-10T19:54:27Z",
@@ -720,7 +720,7 @@
     {
       "id": 1062,
       "assignment_id": 1061,
-      "score": 16.84,
+      "score": 16.48,
       "grade": "90%",
       "graded_at": "2026-09-15T22:09:32Z",
       "submitted_at": "2026-09-01T19:43:24Z",
@@ -766,7 +766,7 @@
     {
       "id": 1066,
       "assignment_id": 1065,
-      "score": 27.45,
+      "score": 26.85,
       "grade": "22",
       "graded_at": "2026-09-14T22:12:30Z",
       "submitted_at": "2026-08-21T19:48:33Z",
@@ -1086,7 +1086,7 @@
     {
       "id": 1094,
       "assignment_id": 1093,
-      "score": 11.23,
+      "score": 10.98,
       "grade": "9",
       "graded_at": "2026-08-31T21:47:09Z",
       "workflow_state": "graded",
@@ -1152,7 +1152,7 @@
     {
       "id": 1100,
       "assignment_id": 1099,
-      "score": 19.96,
+      "score": 19.53,
       "grade": "16",
       "graded_at": "2026-08-28T20:31:26Z",
       "workflow_state": "graded",
@@ -1220,7 +1220,7 @@
     {
       "id": 1106,
       "assignment_id": 1105,
-      "score": 6.24,
+      "score": 6.1,
       "grade": "complete",
       "graded_at": "2026-08-26T16:30:14Z",
       "submitted_at": "2026-08-18T01:07:35Z",
