@@ -1518,135 +1518,100 @@
   "upcoming": [
     {
       "id": 1131,
-      "title": "Sketchbook Check · Unit 6",
-      "start_at": "2026-10-15T06:59:59Z",
-      "html_url": "https://canvas.example.test/courses/105/assignments/1131",
+      "title": "Problem Set · Unit 4",
+      "start_at": "2026-10-15T08:00:00-07:00",
+      "html_url": "https://canvas.example.test/courses/102/assignments/1131",
       "assignment": {
         "id": 1131,
-        "course_id": 105,
-        "name": "Sketchbook Check · Unit 6",
+        "course_id": 102,
+        "name": "Problem Set · Unit 4",
         "description": "",
-        "due_at": "2026-10-15T06:59:59Z",
-        "points_possible": 5.0,
-        "html_url": "https://canvas.example.test/courses/105/assignments/1131",
+        "due_at": "2026-10-15T08:00:00-07:00",
+        "html_url": "https://canvas.example.test/courses/102/assignments/1131",
         "omit_from_final_grade": false
       }
     },
     {
       "id": 1132,
-      "title": "Fitness Check-In · Unit 3",
-      "start_at": "2026-10-16T06:59:59Z",
-      "html_url": "https://canvas.example.test/courses/106/assignments/1132",
+      "title": "Lab Reflection · Unit 2",
+      "start_at": "2026-10-17T15:15:00-07:00",
+      "html_url": "https://canvas.example.test/courses/103/assignments/1132",
       "assignment": {
         "id": 1132,
-        "course_id": 106,
-        "name": "Fitness Check-In · Unit 3",
+        "course_id": 103,
+        "name": "Lab Reflection · Unit 2",
         "description": "",
-        "due_at": "2026-10-16T06:59:59Z",
-        "points_possible": 10.0,
-        "html_url": "https://canvas.example.test/courses/106/assignments/1132",
-        "omit_from_final_grade": false
-      }
-    },
-    {
-      "id": 1013,
-      "title": "Expressions Practice · Unit 1",
-      "start_at": "2026-10-17T06:59:59Z",
-      "html_url": "https://canvas.example.test/courses/102/assignments/1013",
-      "assignment": {
-        "id": 1013,
-        "course_id": 102,
-        "name": "Expressions Practice · Unit 1",
-        "description": "",
-        "due_at": "2026-10-17T06:59:59Z",
-        "points_possible": 80.0,
-        "html_url": "https://canvas.example.test/courses/102/assignments/1013",
-        "omit_from_final_grade": false
-      }
-    },
-    {
-      "id": 1099,
-      "title": "Weekly Activity Log · Unit 3",
-      "start_at": "2026-10-20T21:30:00Z",
-      "html_url": "https://canvas.example.test/courses/106/assignments/1099",
-      "assignment": {
-        "id": 1099,
-        "course_id": 106,
-        "name": "Weekly Activity Log · Unit 3",
-        "description": "",
-        "due_at": "2026-10-20T21:30:00Z",
-        "points_possible": 16.0,
-        "html_url": "https://canvas.example.test/courses/106/assignments/1099",
-        "omit_from_final_grade": false
-      }
-    },
-    {
-      "id": 1003,
-      "title": "Wellness Reflection · Unit 1",
-      "start_at": "2026-10-20T21:30:00Z",
-      "html_url": "https://canvas.example.test/courses/106/assignments/1003",
-      "assignment": {
-        "id": 1003,
-        "course_id": 106,
-        "name": "Wellness Reflection · Unit 1",
-        "description": "",
-        "due_at": "2026-10-20T21:30:00Z",
-        "points_possible": 10.0,
-        "html_url": "https://canvas.example.test/courses/106/assignments/1003",
+        "due_at": "2026-10-17T15:15:00-07:00",
+        "html_url": "https://canvas.example.test/courses/103/assignments/1132",
         "omit_from_final_grade": false
       }
     },
     {
       "id": 1133,
-      "title": "Teamwork Notes · Unit 3",
-      "start_at": "2026-10-20T21:45:00Z",
-      "html_url": "https://canvas.example.test/courses/106/assignments/1133",
+      "title": "Primary Source Notes · Unit 3",
+      "start_at": "2026-10-19T08:00:00-07:00",
+      "html_url": "https://canvas.example.test/courses/104/assignments/1133",
       "assignment": {
         "id": 1133,
-        "course_id": 106,
-        "name": "Teamwork Notes · Unit 3",
+        "course_id": 104,
+        "name": "Primary Source Notes · Unit 3",
         "description": "",
-        "due_at": "2026-10-20T21:45:00Z",
-        "html_url": "https://canvas.example.test/courses/106/assignments/1133",
-        "omit_from_final_grade": false
-      }
-    },
-    {
-      "id": 1001,
-      "title": "Weekly Activity Log · Unit 1",
-      "start_at": "2026-10-21T06:59:59Z",
-      "html_url": "https://canvas.example.test/courses/106/assignments/1001",
-      "assignment": {
-        "id": 1001,
-        "course_id": 106,
-        "name": "Weekly Activity Log · Unit 1",
-        "description": "",
-        "due_at": "2026-10-21T06:59:59Z",
-        "points_possible": 35.0,
-        "html_url": "https://canvas.example.test/courses/106/assignments/1001",
+        "due_at": "2026-10-19T08:00:00-07:00",
+        "html_url": "https://canvas.example.test/courses/104/assignments/1133",
         "omit_from_final_grade": false
       }
     }
   ],
-  "todo": [],
+  "todo": [
+    {
+      "plannable_type": "planner_note",
+      "plannable": {
+        "id": 2001,
+        "course_id": 105,
+        "title": "Pack sketchbook and colored pencils",
+        "details": "",
+        "todo_date": "2026-10-15T07:30:00-07:00"
+      }
+    },
+    {
+      "plannable_type": "planner_note",
+      "plannable": {
+        "id": 2002,
+        "course_id": 103,
+        "title": "Review lab vocabulary",
+        "details": "",
+        "todo_date": "2026-10-16T16:00:00-07:00"
+      }
+    },
+    {
+      "plannable_type": "planner_note",
+      "plannable": {
+        "id": 2003,
+        "course_id": 101,
+        "title": "Read twenty minutes",
+        "details": "",
+        "todo_date": "2026-10-18T18:00:00-07:00"
+      }
+    }
+  ],
   "submissions": {
     "105": {
-      "1131": {
-        "id": 1134,
-        "assignment_id": 1131,
+      "1134": {
+        "id": 1135,
+        "assignment_id": 1134,
         "submitted_at": "2026-10-14T23:34:53Z",
         "workflow_state": "submitted",
         "missing": false,
         "late": false,
         "excused": false,
         "assignment": {
-          "id": 1131,
+          "id": 1134,
           "course_id": 105,
           "name": "Sketchbook Check · Unit 6",
           "description": "",
           "due_at": "2026-10-15T06:59:59Z",
           "points_possible": 5.0,
-          "html_url": "https://canvas.example.test/courses/105/assignments/1131",
+          "html_url": "https://canvas.example.test/courses/105/assignments/1134",
           "omit_from_final_grade": false
         },
         "submission_comments": []
@@ -1675,20 +1640,20 @@
         },
         "submission_comments": []
       },
-      "1133": {
-        "id": 1135,
-        "assignment_id": 1133,
+      "1136": {
+        "id": 1137,
+        "assignment_id": 1136,
         "workflow_state": "unsubmitted",
         "missing": false,
         "late": false,
         "excused": false,
         "assignment": {
-          "id": 1133,
+          "id": 1136,
           "course_id": 106,
-          "name": "Teamwork Notes · Unit 3",
+          "name": "Fitness Check-In · Unit 3",
           "description": "",
           "due_at": "2026-10-20T21:45:00Z",
-          "html_url": "https://canvas.example.test/courses/106/assignments/1133",
+          "html_url": "https://canvas.example.test/courses/106/assignments/1136",
           "omit_from_final_grade": false
         },
         "submission_comments": []
@@ -1715,21 +1680,21 @@
         },
         "submission_comments": []
       },
-      "1132": {
-        "id": 1136,
-        "assignment_id": 1132,
+      "1138": {
+        "id": 1139,
+        "assignment_id": 1138,
         "workflow_state": "unsubmitted",
         "missing": false,
         "late": false,
         "excused": false,
         "assignment": {
-          "id": 1132,
+          "id": 1138,
           "course_id": 106,
-          "name": "Fitness Check-In · Unit 3",
+          "name": "Teamwork Notes · Unit 3",
           "description": "",
           "due_at": "2026-10-16T06:59:59Z",
           "points_possible": 10.0,
-          "html_url": "https://canvas.example.test/courses/106/assignments/1132",
+          "html_url": "https://canvas.example.test/courses/106/assignments/1138",
           "omit_from_final_grade": false
         },
         "submission_comments": []

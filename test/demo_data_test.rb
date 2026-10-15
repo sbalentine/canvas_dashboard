@@ -74,6 +74,17 @@ class DemoDataTest < Minitest::Test
     end.sort.map(&:last)
 
     assert_equal %w[A B C A B], grade_order
+
+    anchor = Time.iso8601(cache.fetch("updated_at"))
+    upcoming = cache.fetch("upcoming")
+    due_times = upcoming.map do |event|
+      Time.iso8601(event.dig("assignment", "due_at"))
+    end
+
+    assert_equal [1, 3, 5], due_times.map { |due| (due.to_date - anchor.to_date).to_i }
+    assert_equal [[8, 0], [15, 15], [8, 0]], due_times.map { |due| [due.hour, due.min] }
+    assert_equal 3, upcoming.map { |event| event.dig("assignment", "course_id") }.uniq.length
+    assert_equal 3, cache.fetch("todo").length
   end
 
   def test_prepare_runtime_shifts_dates_and_isolates_writable_files
@@ -85,8 +96,16 @@ class DemoDataTest < Minitest::Test
     )
     runtime_cache = JSON.parse(File.read(paths.fetch("CACHE_FILE")))
     runtime_updated_at = Time.iso8601(runtime_cache.fetch("updated_at"))
+    source_due_at = Time.iso8601(
+      demo_cache.dig("upcoming", 0, "assignment", "due_at")
+    )
+    runtime_due_at = Time.iso8601(
+      runtime_cache.dig("upcoming", 0, "assignment", "due_at")
+    )
 
     assert_in_delta now.to_f, runtime_updated_at.to_f, 1
+    assert_equal [source_due_at.hour, source_due_at.min],
+      [runtime_due_at.hour, runtime_due_at.min]
     assert paths.values.all? do |path|
       path.start_with?(File.expand_path("../emberguide/tmp/demo", __dir__))
     end

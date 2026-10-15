@@ -20,7 +20,6 @@ module DemoData
     runtime_dir = File.join(app_root, "tmp", "demo")
     cache = read_json(File.join(source_dir, "canvas_cache.json"))
     anchor = Time.parse(cache.fetch("updated_at"))
-    offset_seconds = now - anchor
     offset_days = (now.to_date - anchor.to_date).to_i
 
     FileUtils.mkdir_p(runtime_dir)
@@ -30,7 +29,8 @@ module DemoData
       next unless File.exist?(source_path)
 
       value = read_json(source_path)
-      shifted = shift_dates(value, offset_seconds, offset_days)
+      shifted = shift_dates(value, offset_days)
+      shifted["updated_at"] = now.iso8601 if file_name == "canvas_cache.json"
       File.write(
         File.join(runtime_dir, file_name),
         JSON.pretty_generate(shifted)
@@ -58,28 +58,38 @@ module DemoData
     JSON.parse(File.read(path))
   end
 
-  def shift_dates(value, offset_seconds, offset_days)
+  def shift_dates(value, offset_days)
     case value
     when Hash
       value.transform_values do |child|
-        shift_dates(child, offset_seconds, offset_days)
+        shift_dates(child, offset_days)
       end
     when Array
       value.map do |child|
-        shift_dates(child, offset_seconds, offset_days)
+        shift_dates(child, offset_days)
       end
     when String
-      shift_date_string(value, offset_seconds, offset_days)
+      shift_date_string(value, offset_days)
     else
       value
     end
   end
 
-  def shift_date_string(value, offset_seconds, offset_days)
+  def shift_date_string(value, offset_days)
     if value.match?(/\A\d{4}-\d{2}-\d{2}\z/)
       (Date.iso8601(value) + offset_days).iso8601
     elsif value.match?(/\A\d{4}-\d{2}-\d{2}T/)
-      (Time.iso8601(value) + offset_seconds).iso8601
+      time = Time.iso8601(value)
+      date = time.to_date + offset_days
+      Time.new(
+        date.year,
+        date.month,
+        date.day,
+        time.hour,
+        time.min,
+        time.sec,
+        time.utc_offset
+      ).iso8601
     else
       value
     end

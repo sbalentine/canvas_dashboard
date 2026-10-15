@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "json"
+require "time"
 
 SOURCE_DIR = File.expand_path(
   ARGV.fetch(0, "../emberguide/tmp"),
@@ -131,12 +132,8 @@ class Anonymizer
       "missing" => Array(@cache["missing"]).filter_map do |assignment|
         sanitize_assignment(assignment)
       end,
-      "upcoming" => Array(@cache["upcoming"]).filter_map do |event|
-        sanitize_upcoming(event)
-      end,
-      "todo" => Array(@cache["todo"]).each_with_index.filter_map do |item, index|
-        sanitize_todo(item, index)
-      end,
+      "upcoming" => demo_upcoming,
+      "todo" => demo_todos,
       "submissions" => sanitize_submissions,
       "updated_at" => @cache.fetch("updated_at")
     }
@@ -296,38 +293,85 @@ class Anonymizer
     }.compact
   end
 
-  def sanitize_upcoming(event)
-    assignment = sanitize_assignment(event)
-    return nil unless assignment
-
-    {
-      "id" => assignment["id"],
-      "title" => assignment["name"],
-      "start_at" => assignment["due_at"],
-      "html_url" => assignment["html_url"],
-      "assignment" => assignment
-    }.compact
+  def demo_upcoming
+    [
+      ["Mathematics", "Problem Set · Unit 4", 1, 8, 0],
+      ["Science", "Lab Reflection · Unit 2", 3, 15, 15],
+      ["Social Studies", "Primary Source Notes · Unit 3", 5, 8, 0]
+    ].filter_map do |course_name, name, day_offset, hour, minute|
+      demo_assignment_event(
+        course_name,
+        name,
+        day_offset,
+        hour,
+        minute
+      )
+    end
   end
 
-  def sanitize_todo(item, index)
-    source_course_id =
-      item.dig("plannable", "course_id") ||
-      item["course_id"]
+  def demo_todos
+    [
+      ["Art", "Pack sketchbook and colored pencils", 1, 7, 30],
+      ["Science", "Review lab vocabulary", 2, 16, 0],
+      ["Language Arts", "Read twenty minutes", 4, 18, 0]
+    ].each_with_index.filter_map do |(course_name, title, day_offset, hour, minute), index|
+      source_course_id = @course_names.key(course_name)
+      course_id = map_course_id(source_course_id)
+      next unless course_id
+
+      {
+        "plannable_type" => "planner_note",
+        "plannable" => {
+          "id" => 2001 + index,
+          "course_id" => course_id,
+          "title" => title,
+          "details" => "",
+          "todo_date" => demo_time(day_offset, hour, minute)
+        }
+      }
+    end
+  end
+
+  def demo_assignment_event(course_name, name, day_offset, hour, minute)
+    source_course_id = @course_names.key(course_name)
     course_id = map_course_id(source_course_id)
     return nil unless course_id
 
-    {
-      "plannable_type" => "planner_note",
-      "plannable" => {
-        "id" => 2001 + index,
-        "course_id" => course_id,
-        "title" => "Study Plan #{index + 1}",
-        "details" => "Review today’s notes and prepare for the next class.",
-        "todo_date" =>
-          item.dig("plannable", "todo_date") ||
-          item["plannable_date"]
-      }.compact
+    source_id = "demo-upcoming-#{course_name.downcase.gsub(/\W+/, "-")}"
+    assignment_id = map_assignment_id(source_id)
+    due_at = demo_time(day_offset, hour, minute)
+    assignment = {
+      "id" => assignment_id,
+      "course_id" => course_id,
+      "name" => name,
+      "description" => "",
+      "due_at" => due_at,
+      "html_url" =>
+        "https://canvas.example.test/courses/#{course_id}/assignments/#{assignment_id}",
+      "omit_from_final_grade" => false
     }
+
+    {
+      "id" => assignment_id,
+      "title" => name,
+      "start_at" => due_at,
+      "html_url" => assignment["html_url"],
+      "assignment" => assignment
+    }
+  end
+
+  def demo_time(day_offset, hour, minute)
+    anchor = Time.iso8601(@cache.fetch("updated_at"))
+    date = anchor.to_date + day_offset
+    Time.new(
+      date.year,
+      date.month,
+      date.day,
+      hour,
+      minute,
+      0,
+      anchor.utc_offset
+    ).iso8601
   end
 
   def sanitize_submissions
