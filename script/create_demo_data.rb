@@ -165,6 +165,21 @@ class Anonymizer
       }
     end
 
+    [
+      ["Rhythm and Meter Quiz", 18, 20, -24],
+      ["Listening Analysis", 42, 50, -17],
+      ["Scale Check-In", 17, 20, -10],
+      ["Composition Reflection", 28, 30, -3]
+    ].each_with_index do |(name, score, points_possible, day_offset), index|
+      custom["demo-music-grade-#{index + 1}"] = {
+        "course_id" => "manual-demo-course-1",
+        "name" => name,
+        "score" => score,
+        "points_possible" => points_possible,
+        "graded_at" => demo_time(day_offset, 12, 0).split("T").first
+      }
+    end
+
     { "canvas" => {}, "custom" => custom }
   end
 

@@ -7,6 +7,34 @@
       "score": 54.6,
       "points_possible": 65.0,
       "graded_at": "2026-10-02"
+    },
+    "demo-music-grade-1": {
+      "course_id": "manual-demo-course-1",
+      "name": "Rhythm and Meter Quiz",
+      "score": 18,
+      "points_possible": 20,
+      "graded_at": "2026-09-20"
+    },
+    "demo-music-grade-2": {
+      "course_id": "manual-demo-course-1",
+      "name": "Listening Analysis",
+      "score": 42,
+      "points_possible": 50,
+      "graded_at": "2026-09-27"
+    },
+    "demo-music-grade-3": {
+      "course_id": "manual-demo-course-1",
+      "name": "Scale Check-In",
+      "score": 17,
+      "points_possible": 20,
+      "graded_at": "2026-10-04"
+    },
+    "demo-music-grade-4": {
+      "course_id": "manual-demo-course-1",
+      "name": "Composition Reflection",
+      "score": 28,
+      "points_possible": 30,
+      "graded_at": "2026-10-11"
     }
   }
 }

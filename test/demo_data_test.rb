@@ -96,6 +96,15 @@ class DemoDataTest < Minitest::Test
       manual_coursework.fetch("assignments").values
         .map { |assignment| assignment["completed"] }
         .sort_by(&:to_s)
+
+    music_grades = overrides.fetch("custom").values.select do |grade|
+      grade["course_id"] == "manual-demo-course-1"
+    end
+    assert_equal 4, music_grades.length
+    assert_in_delta 87.5,
+      music_grades.sum { |grade| grade["score"].to_f } /
+        music_grades.sum { |grade| grade["points_possible"].to_f } * 100,
+      0.01
   end
 
   def test_prepare_runtime_shifts_dates_and_isolates_writable_files
