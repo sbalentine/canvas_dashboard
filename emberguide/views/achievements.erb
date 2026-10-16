@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#080711">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Achievements</title>
+</head>
+
+<body>
+  <main class="container settings-page achievements-page">
+    <%
+      navigation_active = "achievements"
+      missing_count = Array(achievement_data["missing"]).length
+    %>
+    <%= render_partial("navigation", binding) %>
+
+    <header class="settings-header achievements-header">
+      <div>
+        <h1>Achievements</h1>
+        <div class="subtitle">
+          Celebrate the habits and progress behind the grades.
+        </div>
+      </div>
+      <a href="/settings/achievements">Customize achievements</a>
+    </header>
+
+    <section class="achievement-grid" aria-label="Current achievement streaks">
+      <article class="card achievement-card achievement-card-on-time">
+        <div class="achievement-card-topline">
+          <span class="achievement-icon" aria-hidden="true">🔥</span>
+          <span class="achievement-label">Current streak</span>
+        </div>
+        <div class="achievement-value">
+          <strong><%= achievement_streaks["on_time"] %></strong>
+          <span><%= achievement_streaks["on_time"] == 1 ? "assignment" : "assignments" %></span>
+        </div>
+        <h2>On-Time Run</h2>
+        <p>
+          Consecutive due assignments submitted without a late or missing mark.
+        </p>
+      </article>
+
+      <article class="card achievement-card achievement-card-clear">
+        <div class="achievement-card-topline">
+          <span class="achievement-icon" aria-hidden="true">◇</span>
+          <span class="achievement-label">Current streak</span>
+        </div>
+        <div class="achievement-value">
+          <strong><%= achievement_streaks["no_missing"] %></strong>
+          <span>school <%= achievement_streaks["no_missing"] == 1 ? "day" : "days" %></span>
+        </div>
+        <h2>Clear Slate</h2>
+        <p>
+          <% if missing_count.zero? %>
+            Consecutive tracked school days ending with no missing assignments.
+          <% else %>
+            Clear the missing-work list to begin the next streak.
+          <% end %>
+        </p>
+      </article>
+
+      <article class="card achievement-card achievement-card-scores">
+        <div class="achievement-card-topline">
+          <span class="achievement-icon" aria-hidden="true">★</span>
+          <span class="achievement-label">Current streak</span>
+        </div>
+        <div class="achievement-value">
+          <strong><%= achievement_streaks["strong_scores"] %></strong>
+          <span><%= achievement_streaks["strong_scores"] == 1 ? "score" : "scores" %></span>
+        </div>
+        <h2>Strong Score Streak</h2>
+        <p>
+          Consecutive graded assignments at <%= strong_score_threshold %>% or higher.
+        </p>
+      </article>
+    </section>
+
+    <section class="achievement-milestones" aria-labelledby="milestones-heading">
+      <div class="achievement-section-heading">
+        <span class="achievement-explainer-kicker">Big-picture progress</span>
+        <h2 id="milestones-heading">Milestones</h2>
+      </div>
+
+      <div class="achievement-milestone-grid">
+        <article class="card achievement-milestone-card">
+          <span class="achievement-icon" aria-hidden="true">✓</span>
+          <div class="achievement-value">
+            <strong><%= achievement_milestones["graded_assignments"] %></strong>
+            <span>graded assignments</span>
+          </div>
+          <h3>Work Completed</h3>
+          <p>
+            Every visible graded assignment adds to this year-long total.
+          </p>
+        </article>
+
+        <article class="card achievement-milestone-card">
+          <span class="achievement-icon" aria-hidden="true">⌁</span>
+          <div class="achievement-value">
+            <strong><%= achievement_milestones.dig("school_year", "completed") %></strong>
+            <span>of <%= achievement_milestones.dig("school_year", "total") %> school days</span>
+          </div>
+          <h3>School Year Journey</h3>
+          <%
+            school_year_total = achievement_milestones.dig("school_year", "total")
+            school_year_percent = school_year_total.positive? ?
+              (100.0 * achievement_milestones.dig("school_year", "completed") / school_year_total).round : 0
+          %>
+          <p>
+            <strong><%= achievement_milestones.dig("school_year", "remaining") %></strong>
+            school days remain through <%= school_year_end.strftime("%B %-d") %>.
+          </p>
+          <progress
+            value="<%= achievement_milestones.dig("school_year", "completed") %>"
+            max="<%= [achievement_milestones.dig("school_year", "total"), 1].max %>"
+            aria-label="School year progress"
+            aria-valuetext="<%= school_year_percent %>% complete"
+          ></progress>
+          <p><strong><%= school_year_percent %>% complete</strong></p>
+        </article>
+      </div>
+    </section>
+
+    <section class="card achievement-explainer">
+      <div>
+        <span class="achievement-explainer-kicker">How streaks work</span>
+        <h2>Progress without pressure</h2>
+      </div>
+      <ul>
+        <li>Excused work and assignments omitted from the final grade do not count.</li>
+        <li>Corrected and custom grades count toward the strong-score streak.</li>
+        <li>Weekends do not interrupt the no-missing school-day streak.</li>
+        <li>No-missing history builds from the day EmberGuide starts tracking it.</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

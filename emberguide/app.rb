@@ -23,6 +23,7 @@ end
 
 require_relative "lib/canvas"
 require_relative "lib/helpers"
+require_relative "lib/achievement_history"
 require_relative "lib/course_name_mappings"
 require_relative "lib/grade_overrides"
 require_relative "lib/hidden_courses"
@@ -51,6 +52,8 @@ if $PROGRAM_NAME == __FILE__
 
   initialize_dashboard_data
   initialize_event_journal
+  current_dashboard_data = dashboard_data
+  record_achievement_day(current_dashboard_data) if current_dashboard_data
   unless DEMO_MODE || NO_BACKGROUND_MODE
     start_refresh_thread
     start_scheduled_email_thread
@@ -216,11 +219,16 @@ server.mount_proc "/calendar" do |request, response|
 
   today = Date.today
   all_calendar_events = school_calendar_events
-  calendar_events = all_calendar_events.select do |event|
-    event["end_date"] >= today
-  end
   calendar_month = requested_calendar_month(request.query["month"], today: today)
   calendar_month_end = (calendar_month >> 1) - 1
+  browsing_calendar_month = !request.query["month"].to_s.empty?
+  calendar_events = all_calendar_events.select do |event|
+    if browsing_calendar_month
+      event["start_date"] <= calendar_month_end && event["end_date"] >= calendar_month
+    else
+      event["end_date"] >= today
+    end
+  end
   calendar_grid_start = calendar_month - calendar_month.wday
   calendar_grid_end = calendar_month_end + (6 - calendar_month_end.wday)
   calendar_events_by_date = Hash.new { |events, date| events[date] = [] }
@@ -256,15 +264,132 @@ rescue => e
   response.body = "Unable to load the school calendar."
 end
 
+# ============================================================
+# Achievements
+# ============================================================
+
+server.mount_proc "/achievements" do |request, response|
+  if request.request_method != "GET"
+    response.status = 405
+    response["Allow"] = "GET"
+    response.body = "Method not allowed"
+    next
+  end
+
+  current_dashboard_data = dashboard_data_with_manual
+  achievement_data = current_dashboard_data || {}
+  grade_overrides = load_grade_overrides
+  achievement_data =
+    hide_assignments_from_dashboard(achievement_data, grade_overrides)
+  achievement_data["grades"] =
+    combined_grade_submissions(achievement_data, grade_overrides)
+  achievement_history =
+    if current_dashboard_data
+      record_achievement_day(achievement_data)
+    else
+      load_achievement_history
+    end
+  achievement_settings = load_achievement_settings
+  strong_score_threshold =
+    achievement_settings["strong_score_threshold"]
+  school_year_start, school_year_end = achievement_school_year_dates(
+    achievement_settings["school_year_start"],
+    achievement_settings["school_year_end"]
+  )
+  achievement_streaks = {
+    "on_time" => on_time_assignment_streak(achievement_data),
+    "no_missing" => no_missing_school_day_streak(achievement_history),
+    "strong_scores" => strong_score_streak(
+      achievement_data,
+      threshold: strong_score_threshold
+    )
+  }
+  achievement_milestones = {
+    "graded_assignments" => achievement_graded_submissions(achievement_data).length,
+    "school_year" => school_year_calendar_progress(achievement_settings)
+  }
+  template = ERB.new(File.read(File.join(APP_ROOT, "views", "achievements.erb")))
+
+  response.status = 200
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Achievements error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load achievements."
+end
+
+server.mount_proc "/settings/achievements" do |request, response|
+  achievement_settings_error = nil
+
+  if request.request_method == "POST"
+    begin
+      existing_settings = load_achievement_settings
+      save_achievement_settings(
+        request.query["strong_score_threshold"],
+        school_year_start: existing_settings["school_year_start"],
+        school_year_end: existing_settings["school_year_end"],
+        school_day_overrides: existing_settings["school_day_overrides"]
+      )
+      response.status = 303
+      response["Location"] = "/settings/achievements?saved=1"
+      response.body = ""
+      next
+    rescue ArgumentError => e
+      achievement_settings_error = e.message
+      response.status = 422
+    end
+  elsif request.request_method != "GET"
+    response.status = 405
+    response["Allow"] = "GET, POST"
+    response.body = "Method not allowed"
+    next
+  end
+
+  achievement_settings = load_achievement_settings
+  if achievement_settings_error
+    achievement_settings["strong_score_threshold"] = request.query["strong_score_threshold"]
+  end
+  template = ERB.new(
+    File.read(File.join(APP_ROOT, "views", "achievement_settings.erb"))
+  )
+
+  response.status = 200 if request.request_method == "GET"
+  response["Content-Type"] = "text/html; charset=utf-8"
+  response["Cache-Control"] = "no-cache"
+  response.body = template.result(binding)
+rescue => e
+  puts "Achievement settings error: #{e.class}: #{e.message}"
+
+  response.status = 500
+  response["Content-Type"] = "text/plain; charset=utf-8"
+  response.body = "Unable to load achievement settings."
+end
+
 server.mount_proc "/settings/calendar" do |request, response|
   calendar_error = nil
 
   if request.request_method == "POST"
     begin
-      save_school_calendar_settings(
-        request.query["calendar_feed_url"],
-        request.query["calendar_excluded_keywords"]
-      )
+      if request.query["action"] == "school_year"
+        existing_settings = load_achievement_settings
+        save_achievement_settings(
+          existing_settings["strong_score_threshold"],
+          school_year_start: request.query["school_year_start"],
+          school_year_end: request.query["school_year_end"],
+          school_day_overrides: achievement_school_day_override_fields(
+            request.query["no_school_dates"], request.query["extra_school_dates"]
+          )
+        )
+      else
+        save_school_calendar_settings(
+          request.query["calendar_feed_url"],
+          request.query["calendar_excluded_keywords"]
+        )
+      end
       response.status = 303
       response["Location"] = "/settings/calendar?saved=1"
       response.body = ""
@@ -281,6 +406,21 @@ server.mount_proc "/settings/calendar" do |request, response|
   end
 
   calendar_settings = load_school_calendar_settings
+  achievement_settings = load_achievement_settings
+  school_year_start, school_year_end = achievement_school_year_dates(
+    achievement_settings["school_year_start"], achievement_settings["school_year_end"]
+  )
+  school_year = school_year_calendar_progress(achievement_settings)
+  school_year_error = calendar_error && request.query["action"] == "school_year"
+  no_school_dates = school_year_error ? request.query["no_school_dates"] :
+    achievement_settings["school_day_overrides"].select { |_day, kind| kind == "no_school" }.keys.join("\n")
+  extra_school_dates = school_year_error ? request.query["extra_school_dates"] :
+    achievement_settings["school_day_overrides"].select { |_day, kind| kind == "school" }.keys.join("\n")
+  if school_year_error
+    %w[school_year_start school_year_end].each do |key|
+      achievement_settings[key] = request.query[key]
+    end
+  end
   template = ERB.new(
     File.read(File.join(APP_ROOT, "views", "calendar_settings.erb"))
   )

@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#080711">
+  <link
+    rel="stylesheet"
+    href="/dashboard.css?v=<%= File.mtime(File.join(APP_ROOT, "public", "dashboard.css")).to_i %>"
+  >
+  <title>Achievement Settings</title>
+</head>
+
+<body>
+  <main class="container settings-page">
+    <%
+      navigation_active = "settings"
+    %>
+    <%= render_partial("navigation", binding) %>
+
+    <header class="settings-header">
+      <div>
+        <h1>Achievements</h1>
+        <div class="subtitle">
+          Choose the goal used for the strong-score streak.
+        </div>
+      </div>
+    </header>
+
+    <% if request.query["saved"] == "1" %>
+      <div class="backup-message success" role="status">
+        <strong>Achievement settings saved.</strong>
+      </div>
+    <% elsif achievement_settings_error %>
+      <div class="backup-message error" role="alert">
+        <strong>Achievement settings not saved.</strong>
+        <%= h achievement_settings_error %>
+      </div>
+    <% end %>
+
+    <section class="card calendar-settings-card">
+      <h2>Strong Score Target</h2>
+      <p class="settings-intro">
+        Scores at or above this percentage continue the Strong Score Streak.
+        The default is 80%, so solid B-level work counts.
+      </p>
+
+      <form method="post" action="/settings/achievements">
+        <label>
+          <span>Score target</span>
+          <input
+            type="number"
+            name="strong_score_threshold"
+            value="<%= h achievement_settings["strong_score_threshold"] %>"
+            min="60"
+            max="100"
+            step="1"
+            inputmode="numeric"
+            required
+          >
+          <small>Choose a percentage from 60% to 100%.</small>
+        </label>
+
+        <div class="settings-actions">
+          <a href="/settings">Cancel</a>
+          <button type="submit">Save Achievements</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

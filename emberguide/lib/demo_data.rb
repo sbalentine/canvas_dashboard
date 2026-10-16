@@ -11,6 +11,8 @@ module DemoData
     hidden_courses.json
     manual_coursework.json
     school_calendar_settings.json
+    achievement_history.json
+    achievement_settings.json
   ].freeze
 
   module_function
@@ -49,6 +51,10 @@ module DemoData
         File.join(runtime_dir, "manual_coursework.json"),
       "SCHOOL_CALENDAR_SETTINGS_FILE" =>
         File.join(runtime_dir, "school_calendar_settings.json"),
+      "ACHIEVEMENT_HISTORY_FILE" =>
+        File.join(runtime_dir, "achievement_history.json"),
+      "ACHIEVEMENT_SETTINGS_FILE" =>
+        File.join(runtime_dir, "achievement_settings.json"),
       "EVENT_JOURNAL_FILE" => File.join(runtime_dir, "event_journal.json"),
       "BACKUP_SETTINGS_FILE" => File.join(runtime_dir, "backup_settings.json")
     }

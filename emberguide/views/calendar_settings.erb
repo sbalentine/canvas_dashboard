@@ -15,7 +15,7 @@
 </head>
 
 <body>
-  <main class="container settings-page">
+  <main class="container settings-page calendar-settings-page">
     <%
       navigation_active = "settings"
     %>
@@ -25,7 +25,7 @@
       <div>
         <h1>Calendar</h1>
         <div class="subtitle">
-          Configure the district calendar feed and event filters.
+          Configure the calendar feed, school year, and school-day calculations.
         </div>
       </div>
     </header>
@@ -81,6 +81,98 @@
           <button type="submit">Save Calendar</button>
         </div>
       </form>
+    </section>
+
+    <section class="card calendar-settings-card school-days-review" id="school-year-settings">
+      <h2>School Year</h2>
+      <p class="settings-intro">
+        Counting starts with Monday through Friday, subtracts clearly labeled
+        no-school calendar events, then applies your overrides.
+        Early-release, minimum-day, and late-start events still count as school days.
+      </p>
+      <form method="post" action="/settings/calendar">
+        <input type="hidden" name="action" value="school_year">
+        <div class="calendar-settings-fields">
+        <label>
+          <span>First day of school</span>
+          <input type="date" name="school_year_start"
+            value="<%= h achievement_settings["school_year_start"] %>" required>
+        </label>
+        <label>
+          <span>Last day of school</span>
+          <input type="date" name="school_year_end"
+            value="<%= h achievement_settings["school_year_end"] %>" required>
+        </label>
+        </div>
+        <h2 class="calendar-settings-subheading">School-Day Overrides</h2>
+        <p class="settings-intro">
+          Enter one YYYY-MM-DD date per line (commas also work), within the school year.
+          Overrides take priority over the calendar. Remove a date to return to
+          automatic counting. These settings are included in backups.
+        </p>
+        <div class="calendar-settings-fields">
+        <label>
+          <span>Additional no-school dates</span>
+          <textarea name="no_school_dates" rows="4"><%= h no_school_dates %></textarea>
+          <small>For unlisted holidays, closures, or days off.</small>
+        </label>
+        <label>
+          <span>School-day dates to include</span>
+          <textarea name="extra_school_dates" rows="4"><%= h extra_school_dates %></textarea>
+          <small>For makeup Saturdays or incorrect calendar closures.</small>
+        </label>
+        </div>
+        <div class="settings-actions">
+          <a href="/settings">Cancel</a>
+          <button type="submit">Save School Year</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card school-days-review" id="school-days-review">
+      <h2>School-Day Review</h2>
+      <p>
+        <%= school_year_start.strftime("%B %-d, %Y") %> through
+        <%= school_year_end.strftime("%B %-d, %Y") %>.
+        <%= school_year["completed"] %> of <%= school_year["total"] %> school days completed;
+        <%= school_year["remaining"] %> remaining.
+        Days before today count as completed; today stays in the remaining count.
+        Calendar display filters do not affect these calculations.
+      </p>
+      <p role="status"><%= h school_year["status"] %></p>
+      <p>
+        Automatic detection uses event titles for explicit closures, named holidays,
+        and seasonal breaks, not every schedule change. Check that detected events
+        apply to your school. <a href="#school-year-settings">Edit day overrides</a>.
+      </p>
+      <details>
+        <summary><%= school_year["excluded_days"].length %> weekdays excluded</summary>
+        <% if school_year["excluded_days"].empty? %>
+          <p>No weekday closures detected or manually excluded.</p>
+        <% else %>
+          <ul class="school-day-review-list">
+            <% school_year["excluded_days"].each do |day| %>
+              <li>
+                <time datetime="<%= day["date"].iso8601 %>"><%= day["date"].strftime("%a, %b %-d, %Y") %></time>
+                <span><%= h day["reasons"].join("; ") %></span>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </details>
+      <% unless achievement_settings["school_day_overrides"].empty? %>
+        <details>
+          <summary>Manual overrides</summary>
+          <ul class="school-day-review-list">
+            <% achievement_settings["school_day_overrides"].each do |day, kind| %>
+              <li>
+                <time datetime="<%= h day %>"><%= h day %></time>
+                <span><%= kind == "school" ? "Count as a school day" : "No school" %></span>
+              </li>
+            <% end %>
+          </ul>
+        </details>
+      <% end %>
     </section>
   </main>
 </body>

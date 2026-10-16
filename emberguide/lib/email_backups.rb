@@ -22,7 +22,7 @@ BACKUP_SETTINGS_FILE =
 
 BACKUP_SEND_HOUR = 3
 DIGEST_SEND_HOUR = 6
-BACKUP_SCHEMA_VERSION = 2
+BACKUP_SCHEMA_VERSION = 3
 BACKUP_MAX_ARCHIVE_BYTES = 25 * 1024 * 1024
 BACKUP_MAX_ENTRY_BYTES = 10 * 1024 * 1024
 BACKUP_MAX_TOTAL_BYTES = 25 * 1024 * 1024
@@ -143,6 +143,9 @@ def backup_payloads(now: Time.now)
   journal = $event_journal_mutex.synchronize do
     Marshal.load(Marshal.dump($event_journal))
   end
+  achievement_history = $achievement_history_mutex.synchronize do
+    load_achievement_history
+  end
   settings = load_scheduled_email_settings.slice(
     "backup_recipients",
     "backup_daily_enabled",
@@ -158,6 +161,8 @@ def backup_payloads(now: Time.now)
     "hidden_courses.json" => backup_json(load_hidden_course_ids),
     "event_journal.json" => backup_json(journal),
     "backup_settings.json" => backup_json(settings),
+    "achievement_history.json" => backup_json(achievement_history),
+    "achievement_settings.json" => backup_json(load_achievement_settings),
     "school_calendar_settings.json" =>
       backup_json(load_school_calendar_settings)
   }
@@ -200,6 +205,8 @@ def backup_restore_paths
     "hidden_courses.json" => HIDDEN_COURSES_FILE,
     "event_journal.json" => EVENT_JOURNAL_FILE,
     "backup_settings.json" => BACKUP_SETTINGS_FILE,
+    "achievement_history.json" => ACHIEVEMENT_HISTORY_FILE,
+    "achievement_settings.json" => ACHIEVEMENT_SETTINGS_FILE,
     "school_calendar_settings.json" => SCHOOL_CALENDAR_SETTINGS_FILE
   }
 end
@@ -225,6 +232,25 @@ def validate_backup_json(filename, value)
         value["events"].is_a?(Array)
     when "backup_settings.json"
       value.is_a?(Hash)
+    when "achievement_history.json"
+      value.is_a?(Hash) &&
+        value["daily_missing_counts"].is_a?(Hash) &&
+        value["daily_missing_counts"].values.all? { |count| count.is_a?(Integer) }
+    when "achievement_settings.json"
+      begin
+        value.is_a?(Hash) &&
+          value["strong_score_threshold"].is_a?(Integer) &&
+          (60..100).cover?(value["strong_score_threshold"]) &&
+          achievement_school_day_overrides(
+            value.fetch("school_day_overrides", {}),
+            *achievement_school_year_dates(
+              value.fetch("school_year_start", DEFAULT_SCHOOL_YEAR_START),
+              value.fetch("school_year_end", DEFAULT_SCHOOL_YEAR_END)
+            )
+          )
+      rescue ArgumentError
+        false
+      end
     when "school_calendar_settings.json"
       value.is_a?(Hash) &&
         value.fetch("feed_url", "").is_a?(String) &&
@@ -286,14 +312,23 @@ def validated_backup_payloads(archive)
 
   manifest = JSON.parse(manifest_content)
   schema_version = manifest["schema_version"]
-  unless [1, BACKUP_SCHEMA_VERSION].include?(schema_version)
+  unless [1, 2, BACKUP_SCHEMA_VERSION].include?(schema_version)
     raise BackupRestoreError, "This backup version is not supported."
   end
   Time.iso8601(manifest.fetch("created_at"))
 
   expected_files =
-    if schema_version == 1
-      backup_restore_paths.keys - ["school_calendar_settings.json"]
+    case schema_version
+    when 1
+      backup_restore_paths.keys -
+        %w[
+          school_calendar_settings.json
+          achievement_history.json
+          achievement_settings.json
+        ]
+    when 2
+      backup_restore_paths.keys -
+        %w[achievement_history.json achievement_settings.json]
     else
       backup_restore_paths.keys
     end

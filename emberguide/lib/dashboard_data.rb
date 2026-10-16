@@ -218,6 +218,7 @@ def refresh_dashboard
 
       $last_refresh_error = nil
     end
+    record_achievement_day(data)
 
     puts(
       "Canvas refresh successful at " \

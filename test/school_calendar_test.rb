@@ -185,4 +185,35 @@ class SchoolCalendarTest < Minitest::Test
 
     assert_equal first, second
   end
+
+  def test_raw_snapshot_is_independent_of_display_filters
+    save_school_calendar_settings("https://calendar.example.test/events.ics", "Fall Break")
+    with_replaced_method(self, :fetch_school_calendar, ->(_url) { calendar_body }) do
+      snapshot = school_calendar_snapshot
+      assert_equal :fresh, snapshot[:status]
+      assert_includes snapshot[:events].map { |event| event["title"] }, "Fall Break"
+      refute_includes school_calendar_events.map { |event| event["title"] }, "Fall Break"
+    end
+  end
+
+  def test_snapshot_exposes_missing_unavailable_and_stale_states
+    assert_equal :not_configured, school_calendar_snapshot[:status]
+    save_school_calendar_settings("https://calendar.example.test/events.ics")
+    with_replaced_method(self, :fetch_school_calendar, ->(_url) { raise "offline" }) do
+      capture_io do
+        assert_equal :unavailable, school_calendar_snapshot[:status]
+      end
+    end
+    now = Time.local(2026, 10, 12)
+    with_replaced_method(self, :fetch_school_calendar, ->(_url) { calendar_body }) do
+      school_calendar_snapshot(now: now)
+    end
+    with_replaced_method(self, :fetch_school_calendar, ->(_url) { raise "offline" }) do
+      capture_io do
+        snapshot = school_calendar_snapshot(now: now + SCHOOL_CALENDAR_CACHE_SECONDS + 1)
+        assert_equal :stale, snapshot[:status]
+        assert_equal 3, snapshot[:events].length
+      end
+    end
+  end
 end

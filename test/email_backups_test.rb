@@ -10,6 +10,8 @@ class EmailBackupsTest < Minitest::Test
     FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
     FileUtils.rm_f(CACHE_FILE)
     FileUtils.rm_f(EVENT_JOURNAL_FILE)
+    FileUtils.rm_f(ACHIEVEMENT_HISTORY_FILE)
+    FileUtils.rm_f(ACHIEVEMENT_SETTINGS_FILE)
     ENV["GMAIL_SENDER"] = ""
     ENV["GMAIL_APP_PASSWORD"] = ""
     $dashboard_data = base_data
@@ -100,6 +102,10 @@ class EmailBackupsTest < Minitest::Test
       "https://calendar.example.test/middle-school.ics",
       "Elementary"
     )
+    record_achievement_day(
+      { "missing" => [] },
+      date: Date.new(2026, 10, 11)
+    )
 
     archive = build_backup_archive(
       now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
@@ -110,6 +116,8 @@ class EmailBackupsTest < Minitest::Test
     end
 
     expected_files = %w[
+      achievement_history.json
+      achievement_settings.json
       backup_settings.json
       canvas_cache.json
       course_name_mappings.json
@@ -138,7 +146,24 @@ class EmailBackupsTest < Minitest::Test
         entries["school_calendar_settings.json"]
       )["excluded_keywords"]
     )
-    assert_equal 2, JSON.parse(entries["manifest.json"])["schema_version"]
+    assert_equal(
+      0,
+      JSON.parse(entries["achievement_history.json"])
+        .dig("daily_missing_counts", "2026-10-11")
+    )
+    assert_equal(
+      80,
+      JSON.parse(entries["achievement_settings.json"])["strong_score_threshold"]
+    )
+    assert_equal(
+      "2026-08-12",
+      JSON.parse(entries["achievement_settings.json"])["school_year_start"]
+    )
+    assert_equal(
+      "2027-06-04",
+      JSON.parse(entries["achievement_settings.json"])["school_year_end"]
+    )
+    assert_equal 3, JSON.parse(entries["manifest.json"])["schema_version"]
   end
 
   def test_backup_restore_round_trip_restores_local_state
@@ -177,6 +202,14 @@ class EmailBackupsTest < Minitest::Test
       "next_id" => 2,
       "events" => [{ "id" => 1, "type" => "grade_posted" }]
     }
+    record_achievement_day(
+      { "missing" => [] },
+      date: Date.new(2026, 10, 11)
+    )
+    save_achievement_settings(
+      85,
+      school_day_overrides: { "2026-10-16" => "no_school", "2026-10-17" => "school" }
+    )
 
     archive = build_backup_archive(
       now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
@@ -190,10 +223,14 @@ class EmailBackupsTest < Minitest::Test
     save_scheduled_email_settings(empty_scheduled_email_settings)
     $dashboard_data = base_data
     $event_journal = { "next_id" => 1, "events" => [] }
+    FileUtils.rm_f(ACHIEVEMENT_HISTORY_FILE)
+    FileUtils.rm_f(ACHIEVEMENT_SETTINGS_FILE)
 
     restored = restore_backup_archive(archive)
 
     assert_includes restored, "school_calendar_settings.json"
+    assert_includes restored, "achievement_history.json"
+    assert_includes restored, "achievement_settings.json"
     assert_equal "Music", load_manual_coursework.dig(
       "courses",
       "music",
@@ -214,8 +251,37 @@ class EmailBackupsTest < Minitest::Test
       load_scheduled_email_settings["backup_recipients"]
     )
     assert_equal 2, $event_journal["next_id"]
+    assert_equal(
+      0,
+      load_achievement_history.dig(
+        "daily_missing_counts",
+        "2026-10-11"
+      )
+    )
+    assert_equal 85,
+      load_achievement_settings["strong_score_threshold"]
+    assert_equal(
+      { "2026-10-16" => "no_school", "2026-10-17" => "school" },
+      load_achievement_settings["school_day_overrides"]
+    )
     assert_equal "2026-10-11T03:00:00-07:00",
       $dashboard_data["updated_at"]
+  end
+
+  def test_backup_validates_school_day_overrides_and_accepts_legacy_settings
+    assert_raises(BackupRestoreError) do
+      validate_backup_json(
+        "achievement_settings.json",
+        empty_achievement_settings.merge("school_day_overrides" => { "2026-10-16" => "maybe" })
+      )
+    end
+    assert_raises(BackupRestoreError) do
+      validate_backup_json(
+        "achievement_settings.json",
+        empty_achievement_settings.merge("school_day_overrides" => [])
+      )
+    end
+    validate_backup_json("achievement_settings.json", { "strong_score_threshold" => 80 })
   end
 
   def test_backup_restore_rejects_checksum_mismatch
@@ -235,9 +301,13 @@ class EmailBackupsTest < Minitest::Test
   def test_backup_restore_accepts_schema_one_without_calendar_settings
     entries = backup_archive_entries(build_backup_archive)
     entries.delete("school_calendar_settings.json")
+    entries.delete("achievement_history.json")
+    entries.delete("achievement_settings.json")
     manifest = JSON.parse(entries["manifest.json"])
     manifest["schema_version"] = 1
     manifest["files"].delete("school_calendar_settings.json")
+    manifest["files"].delete("achievement_history.json")
+    manifest["files"].delete("achievement_settings.json")
     entries["manifest.json"] = backup_json(manifest)
     save_school_calendar_settings(
       "https://calendar.example.test/current.ics"
@@ -252,6 +322,37 @@ class EmailBackupsTest < Minitest::Test
       "https://calendar.example.test/current.ics",
       load_school_calendar_settings["feed_url"]
     )
+  end
+
+  def test_backup_restore_accepts_schema_two_without_achievement_history
+    entries = backup_archive_entries(build_backup_archive)
+    entries.delete("achievement_history.json")
+    entries.delete("achievement_settings.json")
+    manifest = JSON.parse(entries["manifest.json"])
+    manifest["schema_version"] = 2
+    manifest["files"].delete("achievement_history.json")
+    manifest["files"].delete("achievement_settings.json")
+    entries["manifest.json"] = backup_json(manifest)
+    record_achievement_day(
+      { "missing" => [] },
+      date: Date.new(2026, 10, 10)
+    )
+    save_achievement_settings(85)
+
+    restored = restore_backup_archive(
+      backup_archive_from_entries(entries)
+    )
+
+    refute_includes restored, "achievement_history.json"
+    assert_equal(
+      0,
+      load_achievement_history.dig(
+        "daily_missing_counts",
+        "2026-10-10"
+      )
+    )
+    assert_equal 85,
+      load_achievement_settings["strong_score_threshold"]
   end
 
   def test_backup_restore_rejects_secret_files

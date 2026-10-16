@@ -135,14 +135,13 @@
       </div>
     </section>
 
-    <h2 class="calendar-list-heading">Upcoming Events</h2>
+    <h2 class="calendar-list-heading"><%= browsing_calendar_month ? "Events in #{calendar_month.strftime("%B %Y")}" : "Upcoming Events" %></h2>
 
     <% if calendar_events.empty? %>
       <div class="card empty-state">
         <div class="empty-check">✓</div>
         <div>
-          <strong>No upcoming calendar dates.</strong>
-          <span>Check the calendar feed and filters in Settings.</span>
+          <strong><%= browsing_calendar_month ? "No events this month." : "No upcoming calendar dates." %></strong>
         </div>
       </div>
     <% else %>

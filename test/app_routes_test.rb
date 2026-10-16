@@ -19,11 +19,14 @@ end
 
 class AppRoutesTest < Minitest::Test
   def setup
+    FileUtils.rm_f(COURSE_NAME_MAPPINGS_FILE)
     FileUtils.rm_f(GRADE_OVERRIDES_FILE)
     FileUtils.rm_f(MANUAL_COURSEWORK_FILE)
     FileUtils.rm_f(HIDDEN_COURSES_FILE)
     FileUtils.rm_f(BACKUP_SETTINGS_FILE)
     FileUtils.rm_f(SCHOOL_CALENDAR_SETTINGS_FILE)
+    FileUtils.rm_f(ACHIEVEMENT_HISTORY_FILE)
+    FileUtils.rm_f(ACHIEVEMENT_SETTINGS_FILE)
     $school_calendar_cache = nil
     $dashboard_data = {
       "profile" => { "short_name" => "Avery" },
@@ -103,6 +106,8 @@ class AppRoutesTest < Minitest::Test
     backup_settings = request("/settings/backup")
     settings = request("/settings")
     calendar = request("/calendar")
+    achievements = request("/achievements")
+    achievement_settings = request("/settings/achievements")
     calendar_settings = request("/settings/calendar")
     digest_preview = request("/settings/emails/digest-preview")
     backup_download = request("/settings/backup/download")
@@ -147,6 +152,7 @@ class AppRoutesTest < Minitest::Test
     assert_includes settings.body, "<title>Settings</title>"
     assert_includes settings.body, 'rel="stylesheet"'
     assert_includes settings.body, "Scheduled Emails"
+    assert_includes settings.body, 'href="/settings/achievements"'
     assert_includes settings.body, 'href="/settings/backup"'
     assert_includes settings.body, 'href="/settings/calendar"'
     refute_includes settings.body, "Manual Coursework"
@@ -157,9 +163,29 @@ class AppRoutesTest < Minitest::Test
     assert_includes calendar.body, 'rel="stylesheet"'
     assert_includes calendar.body, "School Calendar"
     assert_includes calendar.body, 'class="is-active" href="/calendar"'
+    assert_equal "200", achievements.code
+    assert_includes achievements.body, "<title>Achievements</title>"
+    assert_includes achievements.body, "On-Time Run"
+    assert_includes achievements.body, "Clear Slate"
+    assert_includes achievements.body, "Strong Score Streak"
+    assert_includes achievements.body, "Milestones"
+    assert_includes achievements.body, "Work Completed"
+    assert_includes achievements.body, "School Year Journey"
+    assert_match(/aria-valuetext="\d+% complete"/, achievements.body)
+    assert_match(/<strong>\d+% complete<\/strong>/, achievements.body)
+    assert_includes achievements.body, 'class="is-active" href="/achievements"'
+    assert_equal "200", achievement_settings.code
+    assert_includes achievement_settings.body, "<title>Achievement Settings</title>"
+    assert_includes achievement_settings.body, 'value="80"'
+    refute_includes achievement_settings.body, 'name="school_year_start"'
+    refute_includes achievement_settings.body, "School-Day Overrides"
+    assert_includes achievement_settings.body, 'class="is-active" href="/settings"'
     assert_equal "200", calendar_settings.code
     assert_includes calendar_settings.body, "<title>Calendar Settings</title>"
     assert_includes calendar_settings.body, "District Calendar"
+    assert_includes calendar_settings.body, 'value="2026-08-12"'
+    assert_includes calendar_settings.body, 'value="2027-06-04"'
+    assert_includes calendar_settings.body, "School-Day Review"
     assert_includes calendar_settings.body, 'class="is-active" href="/settings"'
     assert_equal "200", digest_preview.code
     assert_equal "text/html; charset=utf-8", digest_preview["Content-Type"]
@@ -180,6 +206,149 @@ class AppRoutesTest < Minitest::Test
       "/settings/backup/download",
       URI(old_backup_download["Location"]).request_uri
     )
+  end
+
+  def test_achievements_respect_hidden_and_edited_grades
+    now = Time.now
+    $dashboard_data["grades"] = [
+      {
+        "assignment_id" => 10,
+        "score" => 0,
+        "graded_at" => (now + 60).iso8601,
+        "assignment" => {
+          "id" => 10,
+          "course_id" => 1,
+          "name" => "Hidden placeholder",
+          "points_possible" => 10
+        }
+      },
+      {
+        "assignment_id" => 11,
+        "score" => 6,
+        "graded_at" => now.iso8601,
+        "assignment" => {
+          "id" => 11,
+          "course_id" => 1,
+          "name" => "Corrected quiz",
+          "points_possible" => 10
+        }
+      }
+    ]
+    save_grade_overrides(
+      "canvas" => {
+        "10" => { "hidden" => true },
+        "11" => { "score" => 9 }
+      },
+      "custom" => {}
+    )
+
+    response = request("/achievements")
+    score_card = response.body[
+      /<article class="card achievement-card achievement-card-scores">.*?<\/article>/m
+    ]
+
+    assert_equal "200", response.code
+    assert_match(/<strong>\s*1\s*<\/strong>/, score_card)
+  end
+
+  def test_calendar_settings_route_saves_dates_overrides_and_rejects_invalid_input
+    save_achievement_settings(85)
+    save_school_calendar_settings("")
+    calendar_settings = load_school_calendar_settings
+    fields = {
+      "action" => "school_year",
+      "school_year_start" => "2026-08-12",
+      "school_year_end" => "2027-06-04",
+      "no_school_dates" => "2026-10-16",
+      "extra_school_dates" => "2026-10-17"
+    }
+    saved = request("/settings/calendar", Net::HTTP::Post, fields)
+    assert_equal "303", saved.code
+    assert_equal "/settings/calendar?saved=1", URI(saved["Location"]).request_uri
+    settings = load_achievement_settings
+    assert_equal 85, settings["strong_score_threshold"]
+    assert_equal(
+      { "2026-10-16" => "no_school", "2026-10-17" => "school" },
+      settings["school_day_overrides"]
+    )
+    assert_equal calendar_settings, load_school_calendar_settings
+    editor = request("/settings/calendar")
+    assert_match(/name="no_school_dates"[^>]*>2026-10-16</, editor.body)
+    assert_match(/name="extra_school_dates"[^>]*>2026-10-17</, editor.body)
+
+    [
+      [{ "school_year_end" => "2026-01-01" }, "must be after"],
+      [{ "no_school_dates" => "2028-01-01" }, "outside the school year"],
+      [{ "no_school_dates" => "2026-10-17" }, "cannot be both"],
+      [{ "no_school_dates" => "not-a-date" }, "YYYY-MM-DD"]
+    ].each do |changes, error|
+      invalid = request("/settings/calendar", Net::HTTP::Post, fields.merge(changes))
+      assert_equal "422", invalid.code
+      assert_includes invalid.body, error
+      assert_equal settings, load_achievement_settings
+      assert_includes invalid.body, changes.values.first
+    end
+  end
+
+  def test_score_target_updates_preserve_school_year_and_overrides
+    save_achievement_settings(
+      80, school_year_start: "2026-09-01", school_year_end: "2027-05-31",
+      school_day_overrides: { "2026-10-16" => "no_school" }
+    )
+    original = load_achievement_settings
+    saved = request("/settings/achievements", Net::HTTP::Post, "strong_score_threshold" => "85")
+    assert_equal "303", saved.code
+    assert_equal original.merge("strong_score_threshold" => 85), load_achievement_settings
+
+    invalid = request("/settings/achievements", Net::HTTP::Post, "strong_score_threshold" => "101")
+    assert_equal "422", invalid.code
+    assert_includes invalid.body, "60% to 100%"
+    assert_equal original.merge("strong_score_threshold" => 85), load_achievement_settings
+
+    feed_saved = request(
+      "/settings/calendar", Net::HTTP::Post,
+      "calendar_feed_url" => "", "calendar_excluded_keywords" => "Elementary"
+    )
+    assert_equal "303", feed_saved.code
+    assert_equal original.merge("strong_score_threshold" => 85), load_achievement_settings
+  end
+
+  def test_achievements_show_calendar_adjustments_review_and_manual_overrides
+    save_school_calendar_settings("https://calendar.example.test/events.ics", "Fall Break")
+    body = <<~ICS
+      BEGIN:VCALENDAR
+      BEGIN:VEVENT
+      DTSTART;VALUE=DATE:20261012
+      DTEND;VALUE=DATE:20261017
+      SUMMARY:Fall Break
+      END:VEVENT
+      END:VCALENDAR
+    ICS
+    save_achievement_settings(
+      80,
+      school_year_start: "2026-10-12", school_year_end: "2026-10-18",
+      school_day_overrides: { "2026-10-14" => "school", "2026-10-17" => "school" }
+    )
+    original_data = deep_copy($dashboard_data)
+    $school_calendar_cache = {
+      feed_url: "https://calendar.example.test/events.ics",
+      fetched_at: Time.now,
+      events: parse_school_calendar(body)
+    }
+    response = request("/achievements")
+    assert_equal "200", response.code
+    assert_includes response.body, "of 2 school days"
+    refute_includes response.body, "Calendar-adjusted estimate"
+    refute_includes response.body, 'id="school-days-review"'
+    refute_includes response.body, 'href="/settings/calendar#school-days-review"'
+    review = request("/settings/calendar")
+    assert_equal "200", review.code
+    assert_match(/4\s+weekdays excluded/, review.body)
+    assert_includes review.body, "Fall Break"
+    assert_includes review.body, "Count as a school day"
+    assert_includes review.body, 'id="school-days-review"'
+    assert_includes review.body, "Calendar-adjusted estimate"
+    assert_equal original_data, $dashboard_data
   end
 
   def test_backup_restore_upload_imports_data
@@ -313,6 +482,43 @@ class AppRoutesTest < Minitest::Test
     assert_includes body, "Select a highlighted date to see its events."
     assert_includes body, "Fall Break"
     assert_equal "422", request("/calendar?month=not-a-month").code
+  end
+
+  def test_calendar_browsing_shows_past_events_in_grid_details_and_list
+    feed_url = "https://calendar.example.test/events.ics"
+    save_school_calendar_settings(feed_url)
+    month = Date.new(Date.today.year, Date.today.month, 1) << 2
+    $school_calendar_cache = {
+      feed_url: feed_url,
+      fetched_at: Time.now,
+      events: [
+        {
+          "title" => "Past School Holiday", "description" => "", "location" => "",
+          "start_date" => month + 5, "end_date" => month + 5
+        },
+        {
+          "title" => "Break Crossing Month", "description" => "", "location" => "",
+          "start_date" => month - 2, "end_date" => month + 1
+        },
+        {
+          "title" => "Future Assembly", "description" => "", "location" => "",
+          "start_date" => Date.today + 60, "end_date" => Date.today + 60
+        }
+      ]
+    }
+    body = request("/calendar?month=#{month.strftime("%Y-%m")}").body
+    assert_includes body, "data-calendar-date=\"#{(month + 5).iso8601}\""
+    assert_includes body, "id=\"calendar-events-#{(month + 5).iso8601}\""
+    list = body.split('class="calendar-list-heading"').last
+    assert_includes list, "Events in #{month.strftime("%B %Y")}"
+    assert_includes list, "Past School Holiday"
+    assert_includes list, "Break Crossing Month"
+    refute_includes list, "Future Assembly"
+
+    upcoming = request("/calendar").body.split('class="calendar-list-heading"').last
+    assert_includes upcoming, "Upcoming Events"
+    assert_includes upcoming, "Future Assembly"
+    refute_includes upcoming, "Past School Holiday"
   end
 
   def test_next_actions_prioritize_incomplete_work_and_collapse_completed_work

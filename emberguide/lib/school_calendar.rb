@@ -243,18 +243,15 @@ def filter_school_calendar_events(events, excluded_keywords)
   end
 end
 
-def school_calendar_events(now: Time.now, force: false)
+def school_calendar_snapshot(now: Time.now, force: false)
   settings = load_school_calendar_settings
   feed_url = settings["feed_url"]
-  return [] if feed_url.empty?
+  return { events: [], status: :not_configured } if feed_url.empty?
 
   cached = $school_calendar_mutex.synchronize { $school_calendar_cache }
   if !force && cached && cached[:feed_url] == feed_url &&
       now - cached[:fetched_at] < SCHOOL_CALENDAR_CACHE_SECONDS
-    return filter_school_calendar_events(
-      cached[:events],
-      settings["excluded_keywords"]
-    )
+    return { events: cached[:events], status: :fresh }
   end
 
   events = parse_school_calendar(fetch_school_calendar(feed_url))
@@ -265,14 +262,22 @@ def school_calendar_events(now: Time.now, force: false)
       events: events
     }
   end
-  filter_school_calendar_events(events, settings["excluded_keywords"])
+  { events: events, status: :fresh }
 rescue => e
   puts "Unable to refresh school calendar: #{e.class}: #{e.message}"
   if cached && cached[:feed_url] == feed_url
-    filter_school_calendar_events(cached[:events], settings["excluded_keywords"])
+    { events: cached[:events], status: :stale }
   else
-    []
+    { events: [], status: :unavailable }
   end
+end
+
+def school_calendar_events(now: Time.now, force: false)
+  snapshot = school_calendar_snapshot(now: now, force: force)
+  filter_school_calendar_events(
+    snapshot[:events],
+    load_school_calendar_settings["excluded_keywords"]
+  )
 end
 
 def upcoming_school_calendar_events(events, today: Date.today, days: 30, limit: 3)

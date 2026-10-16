@@ -124,6 +124,27 @@ Add manual classes and assignments for coursework outside Canvas. Long Canvas
 course names can be shortened, and irrelevant enrollments can be hidden
 locally, without changing the student's actual Canvas enrollment.
 
+### School-year progress
+
+The monthly calendar includes past events supplied by the connected feed.
+Browsing a month also shows that month's event list, including past dates;
+the default calendar page keeps the upcoming-events list. Some feeds omit
+older events, so an empty past month does not necessarily mean school had no events.
+
+The Achievements page shows completed and remaining school days using the first
+and last dates configured in **Settings → Calendar**. Counting starts with
+weekdays and subtracts clearly labeled calendar closures, named holidays, and
+seasonal breaks. Minimum days, early releases, and late starts still count.
+Calendar display-filter keywords do not change the school-day calculation.
+
+Open **School-Day Review** in Calendar Settings to review the dates and event titles
+used. Add no-school dates or force dates to count as school days (including makeup
+Saturdays) in Calendar Settings. Overrides take priority and are included in
+data backups. Days before today count as completed; today remains in the count
+of days left. Totals are estimates: calendar feeds can omit closures or contain
+events for other schools. Calendar Settings flags unavailable, stale, or incomplete-range
+calendar data rather than presenting it as an exact attendance record.
+
 ### ✉️ Family-friendly digests and backups
 
 Preview, send on demand, or schedule a responsive morning digest containing the
@@ -177,7 +198,7 @@ Example:
 ```yaml
 name: "EmberGuide"
 description: "A clear, family-friendly guide to Canvas coursework"
-version: "1.1.0"
+version: "1.2.0"
 url: "https://github.com/sbalentine/emberguide"
 slug: "emberguide"
 init: false
