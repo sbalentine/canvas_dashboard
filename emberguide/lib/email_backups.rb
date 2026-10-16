@@ -235,7 +235,12 @@ def validate_backup_json(filename, value)
     when "achievement_history.json"
       value.is_a?(Hash) &&
         value["daily_missing_counts"].is_a?(Hash) &&
-        value["daily_missing_counts"].values.all? { |count| count.is_a?(Integer) }
+        value["daily_missing_counts"].values.all? { |count| count.is_a?(Integer) } &&
+        begin
+          validated_earned_badges(value.fetch("earned_badges", {}))
+        rescue ArgumentError
+          false
+        end
     when "achievement_settings.json"
       begin
         value.is_a?(Hash) &&

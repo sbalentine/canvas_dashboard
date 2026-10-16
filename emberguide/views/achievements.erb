@@ -129,6 +129,44 @@
       </div>
     </section>
 
+    <section class="badge-collection" aria-labelledby="badge-collection-heading">
+      <div class="achievement-section-heading">
+        <span class="achievement-explainer-kicker">Your trophy shelf</span>
+        <h2 id="badge-collection-heading">Badge Collection</h2>
+        <p>
+          <%= achievement_badge_groups.sum { |group| group["badges"].count { |badge| badge["earned_on"] } } %>
+          of 20 collected. Once unlocked, yours to keep!
+        </p>
+      </div>
+      <% achievement_badge_groups.each do |group| %>
+        <section class="badge-family" aria-labelledby="badge-family-<%= group["id"] %>">
+          <h3 id="badge-family-<%= group["id"] %>"><%= h group["title"] %></h3>
+          <div class="badge-grid">
+            <% group["badges"].each_with_index do |badge, index| %>
+              <article class="card collectible-badge <%= badge["earned_on"] ? "is-earned" : "is-locked" %> badge-tier-<%= index + 1 %>">
+                <div class="badge-emblem" aria-hidden="true">
+                  <span><%= group["icon"] %></span>
+                  <small><%= index + 1 %></small>
+                </div>
+                <span class="achievement-label"><%= badge["earned_on"] ? "Unlocked" : "Locked" %></span>
+                <h4><%= h badge["name"] %></h4>
+                <p>
+                  <%= badge["goal"] %><%= group["id"] == "school_year" ? group["unit"] : " #{group["unit"]}" %><%= group["id"] == "strong_scores" ? " at #{strong_score_threshold}% or higher" : "" %>
+                </p>
+                <% if badge["earned_on"] %>
+                  <span class="badge-earned-date">Collected <%= Date.iso8601(badge["earned_on"]).strftime("%b %-d, %Y") %></span>
+                <% else %>
+                  <progress value="<%= badge["progress"] %>" max="<%= badge["goal"] %>"
+                    aria-label="<%= h badge["name"] %> progress"></progress>
+                  <span class="badge-earned-date"><%= badge["progress"].floor %> / <%= badge["goal"] %><%= group["id"] == "school_year" ? "%" : "" %></span>
+                <% end %>
+              </article>
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+    </section>
+
     <section class="card achievement-explainer">
       <div>
         <span class="achievement-explainer-kicker">How streaks work</span>

@@ -139,6 +139,57 @@ class AchievementHistoryTest < Minitest::Test
     )
   end
 
+  def badge_progress(streak: 0, assignments: 0, completed: 0, total: 100)
+    record_achievement_badges(
+      { "on_time" => streak, "no_missing" => streak, "strong_scores" => streak },
+      {
+        "graded_assignments" => assignments,
+        "school_year" => { "completed" => completed, "total" => total }
+      },
+      date: Date.new(2026, 10, 15)
+    )
+  end
+
+  def test_badge_collection_has_exact_goals_and_unique_names
+    groups = badge_progress
+    assert_equal 20, groups.sum { |group| group["badges"].length }
+    assert_equal 20, groups.flat_map { |group| group["badges"].map { |badge| badge["name"] } }.uniq.length
+    assert_equal(
+      [[5, 10, 25, 50], [5, 10, 20, 30], [5, 10, 20, 30], [25, 50, 100, 200], [25, 50, 75, 100]],
+      groups.map { |group| group["goals"] }
+    )
+    assert groups.all? { |group| group["badges"].all? { |badge| badge["earned_on"].nil? } }
+  end
+
+  def test_badges_unlock_at_threshold_and_survive_resets_and_daily_snapshots
+    groups = badge_progress(streak: 10, assignments: 50, completed: 25)
+    assert_equal 9, groups.sum { |group| group["badges"].count { |badge| badge["earned_on"] } }
+    earned = load_achievement_history["earned_badges"]
+    assert_equal "2026-10-15", earned["school_year-25"]
+    record_achievement_day({ "missing" => [] }, date: Date.new(2026, 10, 16))
+    badge_progress
+    assert_equal earned, load_achievement_history["earned_badges"]
+  end
+
+  def test_year_badges_use_exact_percentage_not_rounded_display
+    groups = badge_progress(completed: 49, total: 200)
+    assert_nil groups.last["badges"].first["earned_on"]
+    groups = badge_progress(completed: 50, total: 200)
+    assert groups.last["badges"].first["earned_on"]
+    assert_nil groups.last["badges"][1]["earned_on"]
+    groups = badge_progress(completed: 0, total: 0)
+    assert_nil groups.last["badges"].last["earned_on"]
+    groups = badge_progress(completed: 200, total: 200)
+    assert groups.last["badges"].all? { |badge| badge["earned_on"] }
+  end
+
+  def test_legacy_history_defaults_to_empty_badge_collection
+    File.write(ACHIEVEMENT_HISTORY_FILE, JSON.generate("daily_missing_counts" => {}))
+    assert_equal({}, load_achievement_history["earned_badges"])
+    assert_raises(ArgumentError) { validated_earned_badges("invalid") }
+    assert_raises(ArgumentError) { validated_earned_badges("badge" => "2026-02-30") }
+  end
+
   def calendar_event(title, first, last = first)
     {
       "title" => title,

@@ -24,8 +24,36 @@ DEFAULT_SCHOOL_YEAR_START = "2026-08-12"
 DEFAULT_SCHOOL_YEAR_END = "2027-06-04"
 $achievement_history_mutex = Mutex.new
 
+ACHIEVEMENT_BADGE_GROUPS = [
+  {
+    "id" => "on_time", "title" => "On-Time Run", "icon" => "🔥",
+    "unit" => "on-time assignments", "goals" => [5, 10, 25, 50],
+    "names" => ["On the Dot", "Clockwork Kid", "Deadline Ninja", "Time Lord"]
+  },
+  {
+    "id" => "no_missing", "title" => "Clear Slate", "icon" => "◇",
+    "unit" => "tracked school days with no missing work", "goals" => [5, 10, 20, 30],
+    "names" => ["Fresh Start", "Neat Streak", "Clean Sweep", "Slate Champion"]
+  },
+  {
+    "id" => "strong_scores", "title" => "Strong Score Streak", "icon" => "★",
+    "unit" => "consecutive strong scores", "goals" => [5, 10, 20, 30],
+    "names" => ["Spark Starter", "On Fire", "Meteor Shower", "Supernova"]
+  },
+  {
+    "id" => "graded_assignments", "title" => "Work Completed", "icon" => "✓",
+    "unit" => "graded assignments", "goals" => [25, 50, 100, 200],
+    "names" => ["Quest Accepted", "Quest Collector", "Century Club", "Legend of the Backpack"]
+  },
+  {
+    "id" => "school_year", "title" => "School Year Journey", "icon" => "⌁",
+    "unit" => "% of the school year completed", "goals" => [25, 50, 75, 100],
+    "names" => ["Off to Adventure", "Halfway Hero", "Final Stretch", "School Year Conqueror"]
+  }
+].freeze
+
 def empty_achievement_history
-  { "daily_missing_counts" => {} }
+  { "daily_missing_counts" => {}, "earned_badges" => {} }
 end
 
 def empty_achievement_settings
@@ -118,11 +146,54 @@ def load_achievement_history
   return empty_achievement_history unless counts.is_a?(Hash)
 
   {
-    "daily_missing_counts" => counts.transform_values(&:to_i)
+    "daily_missing_counts" => counts.transform_values(&:to_i),
+    "earned_badges" => validated_earned_badges(history.fetch("earned_badges", {}))
   }
-rescue JSON::ParserError, TypeError
+rescue JSON::ParserError, TypeError, ArgumentError
   puts "Unable to load achievement history."
   empty_achievement_history
+end
+
+def validated_earned_badges(badges)
+  valid = badges.is_a?(Hash) && badges.all? do |id, earned_on|
+    id.is_a?(String) && earned_on.is_a?(String) &&
+      earned_on.match?(/\A\d{4}-\d{2}-\d{2}\z/) && Date.iso8601(earned_on)
+  end
+  unless valid
+    raise ArgumentError, "Invalid earned achievement badges."
+  end
+  badges
+end
+
+def record_achievement_badges(streaks, milestones, date: Date.today)
+  school_year = milestones.fetch("school_year")
+  total = school_year.fetch("total")
+  values = streaks.merge(
+    "graded_assignments" => milestones.fetch("graded_assignments"),
+    "school_year" => total.positive? ? school_year.fetch("completed") * 100.0 / total : 0
+  )
+  $achievement_history_mutex.synchronize do
+    history = load_achievement_history
+    earned = history.fetch("earned_badges")
+    changed = false
+    groups = ACHIEVEMENT_BADGE_GROUPS.map do |group|
+      badges = group["goals"].each_with_index.map do |goal, index|
+        id = "#{group["id"]}-#{goal}"
+        if values.fetch(group["id"]) >= goal && !earned.key?(id)
+          earned[id] = date.iso8601
+          changed = true
+        end
+        {
+          "id" => id, "name" => group["names"][index], "goal" => goal,
+          "earned_on" => earned[id],
+          "progress" => [values.fetch(group["id"]), goal].min
+        }
+      end
+      group.merge("badges" => badges)
+    end
+    save_achievement_history(history) if changed
+    groups
+  end
 end
 
 def save_achievement_history(history)

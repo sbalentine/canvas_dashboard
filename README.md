@@ -126,7 +126,32 @@ Add manual classes and assignments for coursework outside Canvas. Long Canvas
 course names can be shortened, and irrelevant enrollments can be hidden
 locally, without changing the student's actual Canvas enrollment.
 
-### School-year progress
+### 🏆 Playful achievements and collectible badges
+
+Celebrate consistent effort with **On-Time Run**, **Clear Slate**, and
+**Strong Score Streak**. Strong scores default to 80%, with a configurable
+target in Achievement Settings. Milestones track graded assignments completed
+and the school-year journey.
+
+Collect **20 permanent badges** across these five categories:
+
+| Category | Badge goals |
+| --- | --- |
+| On-Time Run | 5 / 10 / 25 / 50 consecutive on-time assignments |
+| Clear Slate | 5 / 10 / 20 / 30 consecutive tracked school days without missing work |
+| Strong Score Streak | 5 / 10 / 20 / 30 consecutive scores at or above your target |
+| Work Completed | 25 / 50 / 100 / 200 graded assignments |
+| School Year Journey | 25% / 50% / 75% / 100% completed |
+
+Earn playful titles like **Deadline Ninja**, **Supernova**, **Halfway Hero**,
+and **Legend of the Backpack**. Locked badges are gray with progress toward
+their goals; earned badges light up in mint, blue, lavender, and gold by tier,
+with colorful backgrounds, borders, and glowing emblems. Unlocked badges
+stay collected even when a streak resets or settings change. Badges unlock from
+the progress observed when opening Achievements (not reconstructed past streaks).
+Collection dates and earned badges are included in data backups.
+
+### School calendar and year-long progress
 
 The monthly calendar includes past events supplied by the connected feed.
 Browsing a month also shows that month's event list, including past dates;
@@ -200,7 +225,7 @@ Example:
 ```yaml
 name: "EmberGuide"
 description: "A clear, family-friendly guide to Canvas coursework"
-version: "1.2.1"
+version: "1.3.0"
 url: "https://github.com/sbalentine/emberguide"
 slug: "emberguide"
 init: false

@@ -171,6 +171,9 @@ class AppRoutesTest < Minitest::Test
     assert_includes achievements.body, "Milestones"
     assert_includes achievements.body, "Work Completed"
     assert_includes achievements.body, "School Year Journey"
+    assert_includes achievements.body, "Badge Collection"
+    assert_equal 20, achievements.body.scan('class="card collectible-badge ').length
+    assert_includes achievements.body, "is-locked"
     assert_match(/aria-valuetext="\d+% complete"/, achievements.body)
     assert_match(/<strong>\d+% complete<\/strong>/, achievements.body)
     assert_includes achievements.body, 'class="is-active" href="/achievements"'

@@ -308,6 +308,9 @@ server.mount_proc "/achievements" do |request, response|
     "graded_assignments" => achievement_graded_submissions(achievement_data).length,
     "school_year" => school_year_calendar_progress(achievement_settings)
   }
+  achievement_badge_groups = record_achievement_badges(
+    achievement_streaks, achievement_milestones
+  )
   template = ERB.new(File.read(File.join(APP_ROOT, "views", "achievements.erb")))
 
   response.status = 200

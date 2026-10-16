@@ -106,6 +106,9 @@ class EmailBackupsTest < Minitest::Test
       { "missing" => [] },
       date: Date.new(2026, 10, 11)
     )
+    history = load_achievement_history
+    history["earned_badges"] = { "on_time-5" => "2026-10-11" }
+    save_achievement_history(history)
 
     archive = build_backup_archive(
       now: Time.new(2026, 10, 11, 3, 0, 0, "-07:00")
@@ -206,6 +209,9 @@ class EmailBackupsTest < Minitest::Test
       { "missing" => [] },
       date: Date.new(2026, 10, 11)
     )
+    history = load_achievement_history
+    history["earned_badges"] = { "on_time-5" => "2026-10-11" }
+    save_achievement_history(history)
     save_achievement_settings(
       85,
       school_day_overrides: { "2026-10-16" => "no_school", "2026-10-17" => "school" }
@@ -260,6 +266,10 @@ class EmailBackupsTest < Minitest::Test
     )
     assert_equal 85,
       load_achievement_settings["strong_score_threshold"]
+    assert_equal(
+      { "on_time-5" => "2026-10-11" },
+      load_achievement_history["earned_badges"]
+    )
     assert_equal(
       { "2026-10-16" => "no_school", "2026-10-17" => "school" },
       load_achievement_settings["school_day_overrides"]
