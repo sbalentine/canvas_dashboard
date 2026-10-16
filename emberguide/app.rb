@@ -908,7 +908,7 @@ rescue ArgumentError, TypeError
 end
 
 def grade_override_fields(request, data, existing, course_id: nil)
-  target_submissions = (data["grades"] || []).select do |submission|
+  target_submissions = editable_canvas_submissions(data).select do |submission|
     course_id.nil? ||
       submission.dig("assignment", "course_id").to_s == course_id
   end

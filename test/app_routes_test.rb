@@ -484,6 +484,36 @@ class AppRoutesTest < Minitest::Test
     assert_equal "422", request("/calendar?month=not-a-month").code
   end
 
+  def test_grade_editor_can_hide_ungraded_upcoming_assignments
+    assignment = {
+      "id" => 42, "course_id" => 1,
+      "name" => "Ungraded classroom activity",
+      "due_at" => (Time.now + 3600).iso8601,
+      "points_possible" => nil, "submission_types" => ["not_graded"]
+    }
+    submission = {
+      "assignment_id" => 42, "assignment" => assignment,
+      "score" => nil, "graded_at" => nil, "workflow_state" => "unsubmitted"
+    }
+    $dashboard_data["upcoming"] = [{ "assignment" => assignment }]
+    $dashboard_data["submissions"] = { "1" => { "42" => submission } }
+    editor = request("/settings/grades?course_id=1")
+    assert_includes editor.body, "Ungraded classroom activity"
+    assert_equal 1, editor.body.scan('name="canvas_42_hidden"').length
+    assert_includes editor.body, "No grade"
+    saved = request(
+      "/settings/grades", Net::HTTP::Post,
+      "course_id" => "1", "canvas_42_hidden" => "true"
+    )
+    assert_equal "303", saved.code
+    assert load_grade_overrides.dig("canvas", "42", "hidden")
+    refute_includes request("/").body, "Ungraded classroom activity"
+    assert_empty reconcile_canvas_grade_overrides($dashboard_data)
+    submission["score"] = 9
+    assert_equal ["42"], reconcile_canvas_grade_overrides($dashboard_data)
+    assert_includes request("/settings/grades?course_id=1").body, "Ungraded classroom activity"
+  end
+
   def test_calendar_browsing_shows_past_events_in_grid_details_and_list
     feed_url = "https://calendar.example.test/events.ics"
     save_school_calendar_settings(feed_url)

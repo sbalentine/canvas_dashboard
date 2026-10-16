@@ -113,6 +113,8 @@ points possible, and dates.
 Local grade tools can correct stale Canvas values, add grades from another
 system, or temporarily hide an inaccurate assignment until Canvas updates. All
 changes stay inside EmberGuide and never modify the Canvas gradebook.
+The assignment editor also lists ungraded and upcoming Canvas work, so an
+in-class activity or reminder can be hidden without assigning it a score.
 
 > **Grade estimates:** EmberGuide calculates percentages from assignments
 > available through the API. Weighted groups, grading periods, dropped work,
@@ -198,7 +200,7 @@ Example:
 ```yaml
 name: "EmberGuide"
 description: "A clear, family-friendly guide to Canvas coursework"
-version: "1.2.0"
+version: "1.2.1"
 url: "https://github.com/sbalentine/emberguide"
 slug: "emberguide"
 init: false

@@ -48,6 +48,22 @@ def canvas_assignment_hidden?(item, overrides)
   overrides.fetch("canvas", {}).dig(assignment_id(item).to_s, "hidden") == true
 end
 
+def editable_canvas_submissions(data)
+  submissions = Array(data["grades"]).dup
+  data.fetch("submissions", {}).each_value do |course_submissions|
+    submissions.concat(course_submissions.values)
+  end
+  (Array(data["missing"]) + Array(data["upcoming"])).each do |item|
+    assignment = item["assignment"] || item
+    submissions << { "assignment_id" => assignment["id"], "assignment" => assignment }
+  end
+
+  submissions.select do |submission|
+    assignment = submission["assignment"] || {}
+    assignment_id(submission) && assignment["_manual"] != true
+  end.uniq { |submission| assignment_id(submission).to_s }
+end
+
 def hide_assignments_from_dashboard(data, overrides)
   data.merge(
     %w[grades missing upcoming].to_h do |collection|
@@ -64,7 +80,7 @@ def reconcile_canvas_grade_overrides(data)
   changed = false
   removed_assignment_ids = []
 
-  submissions_by_assignment = (data["grades"] || []).each_with_object({}) do |submission, index|
+  submissions_by_assignment = editable_canvas_submissions(data).each_with_object({}) do |submission, index|
     assignment_id =
       submission["assignment_id"] ||
       submission.dig("assignment", "id")
